@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Modal,
   Pressable,
@@ -15,8 +16,8 @@ import { HomeSearchBar } from '../components/home/HomeSearchBar';
 import { PromoBannerCarousel } from '../components/home/PromoBannerCarousel';
 import { SectionHeader } from '../components/home/SectionHeader';
 import { SupermarketListCard } from '../components/home/SupermarketListCard';
-import { useDemo } from '../context/DemoContext';
-import { SUPERMARKETS } from '../data/supermarkets';
+
+import { supermarketService } from '../services/supermarketService';
 import { navigateRoot } from '../navigation/navigationRef';
 import { colors, radii, spacing } from '../theme';
 
@@ -24,21 +25,40 @@ const TAB_BAR_EXTRA = 64;
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const {
-    savedAddresses,
-    selectedAddressId,
-    setSelectedAddressId,
-  } = useDemo();
+  const [savedAddresses] = useState([
+    { id: '1', label: 'Home', line: '123 Main St, Lagos' }
+  ]);
+  const [selectedAddressId, setSelectedAddressId] = useState('1');
+  
   const [addrOpen, setAddrOpen] = useState(false);
   const [homeCategory, setHomeCategory] = useState<string | null>(null);
+  const [supermarkets, setSupermarkets] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSupermarkets = async () => {
+      try {
+        const data = await supermarketService.getSupermarkets();
+        setSupermarkets(data.supermarkets || data || []);
+      } catch (error: any) {
+        const msg = error.response?.data?.message || 'Failed to load supermarkets.';
+        Alert.alert('Error', msg);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSupermarkets();
+  }, []);
 
   const addr = savedAddresses.find((a) => a.id === selectedAddressId);
   const deliveryLine = addr
     ? `${addr.label}, ${addr.line.split(',').slice(0, 1).join('').trim()}`
     : 'Select address';
 
-  const openStore = (storeId: string, categoryId?: string) => {
-    navigateRoot('Store', { storeId, categoryId });
+  const openStore = (storeId?: string, categoryId?: string) => {
+    if (storeId) {
+      navigateRoot('Store', { storeId, categoryId });
+    }
   };
 
   return (
@@ -63,36 +83,42 @@ export function HomeScreen() {
           onSubmit={() =>
             Alert.alert(
               'Search',
-              'Try opening a supermarket to search products there (demo).',
+              'Try opening a supermarket to search products there.',
             )
           }
-          onPressFilter={() => Alert.alert('Filters', 'Filter panel (mock).')}
+          onPressFilter={() => Alert.alert('Filters', 'Filter panel.')}
         />
         <PromoBannerCarousel />
         <SectionHeader
           title="Categories"
           actionLabel="View all"
           onPressAction={() =>
-            openStore(SUPERMARKETS[0].id)
+            openStore(supermarkets.length > 0 ? supermarkets[0].id : undefined)
           }
         />
         <CategoryPillGrid
           selectedId={homeCategory}
           onSelect={(id) => {
             setHomeCategory(id);
-            openStore(SUPERMARKETS[0].id, id);
+            openStore(supermarkets.length > 0 ? supermarkets[0].id : undefined, id);
           }}
         />
         <View style={styles.sectionSpacer} />
         <SectionHeader title="Supermarkets Near You" />
-        {SUPERMARKETS.map((store) => (
-          <SupermarketListCard
-            key={store.id}
-            store={store}
-            onPress={() => openStore(store.id)}
-          />
-        ))}
+        
+        {loading ? (
+          <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: spacing.xl }} />
+        ) : (
+          supermarkets.map((store) => (
+            <SupermarketListCard
+              key={store.id}
+              store={store}
+              onPress={() => openStore(store.id)}
+            />
+          ))
+        )}
       </ScrollView>
+      
       <Modal visible={addrOpen} transparent animationType="fade">
         <View style={styles.modalWrap}>
           <Pressable

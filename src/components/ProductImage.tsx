@@ -10,16 +10,11 @@ type Props = {
 
 export function ProductImage({ uri, style, label = 'Goshop' }: Props) {
   const [failed, setFailed] = useState(false);
-  if (!uri || failed) {
-    return (
-      <View style={[styles.ph, style]}>
-        <Text style={styles.phText}>{label.slice(0, 2).toUpperCase()}</Text>
-      </View>
-    );
-  }
+  const fallback = 'https://placehold.co/150x150/png?text=No+Image';
+
   return (
     <Image
-      source={{ uri }}
+      source={{ uri: failed || !uri ? fallback : uri }}
       style={style}
       onError={() => setFailed(true)}
     />

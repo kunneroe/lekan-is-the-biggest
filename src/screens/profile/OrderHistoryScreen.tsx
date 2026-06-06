@@ -1,12 +1,12 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useDemo } from '../../context/DemoContext';
+
 import { navigateRoot } from '../../navigation/navigationRef';
 import { colors, radii, spacing } from '../../theme';
 
 export function OrderHistoryScreen() {
   const insets = useSafeAreaInsets();
-  const { orders } = useDemo();
+  const orders: any[] = [];
   const list = [...orders].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
   return (
@@ -34,7 +34,7 @@ export function OrderHistoryScreen() {
               {o.createdAt} · {o.status === 'active' ? 'Active' : 'Delivered'}
             </Text>
           </View>
-          <Text style={styles.price}>₦{o.total.toLocaleString()}</Text>
+          <Text style={styles.price}>₦{Number(o.total || 0).toLocaleString()}</Text>
         </Pressable>
       ))}
     </ScrollView>

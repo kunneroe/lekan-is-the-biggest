@@ -3,6 +3,8 @@ import { useRoute, useNavigation, type RouteProp } from '@react-navigation/nativ
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Image,
   ImageBackground,
   Pressable,
@@ -14,14 +16,12 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProductImage } from '../components/ProductImage';
-import { useDemo } from '../context/DemoContext';
-import {
-  getCategoryLabel,
-  getProductsForStore,
-  type Product,
-} from '../data/products';
+import { getCategoryLabel, type Product } from '../data/products';
 import { CATEGORY_ITEMS } from '../data/supermarkets';
 import type { RootStackParamList } from '../navigation/navigationRef';
+import { supermarketService } from '../services/supermarketService';
+import { productService } from '../services/productService';
+import { cartService } from '../services/cartService';
 import { colors, radii, shadows, spacing, typography } from '../theme';
 
 type R = RouteProp<RootStackParamList, 'Store'>;
@@ -32,18 +32,36 @@ export function StoreScreen() {
   const route = useRoute<R>();
   const navigation = useNavigation<Nav>();
   const { storeId, categoryId: routeCategory } = route.params;
-  const { getSupermarket, addToCart } = useDemo();
-  const store = getSupermarket(storeId);
+  
+  const [store, setStore] = useState<any>(null);
+  const [allProducts, setAllProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [categoryId, setCategoryId] = useState<string | null>(
-    routeCategory ?? null,
-  );
+  const [categoryId, setCategoryId] = useState<string | null>(routeCategory ?? null);
+  const [heroErr, setHeroErr] = useState(false);
+  const [addingId, setAddingId] = useState<string | null>(null);
 
   useEffect(() => {
     setCategoryId(routeCategory ?? null);
   }, [storeId, routeCategory]);
 
-  const allProducts = useMemo(() => getProductsForStore(storeId), [storeId]);
+  useEffect(() => {
+    const loadStoreData = async () => {
+      try {
+        setLoading(true);
+        const storeData = await supermarketService.getSupermarketById(storeId);
+        setStore(storeData.supermarket || storeData);
+        
+        const productsData = await productService.getProductsBySupermarket(storeId);
+        setAllProducts(productsData.products || productsData || []);
+      } catch (error: any) {
+        Alert.alert('Error', error.response?.data?.message || 'Failed to load store details.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadStoreData();
+  }, [storeId]);
 
   const filtered = useMemo(() => {
     let list = allProducts;
@@ -61,15 +79,51 @@ export function StoreScreen() {
     return list;
   }, [allProducts, categoryId, search]);
 
-  if (!store) {
+  const handleAddToCart = async (productId: string) => {
+    if (addingId) return;
+    setAddingId(productId);
+    try {
+      await cartService.addItem(productId, 1);
+      Alert.alert('Success', 'Item added to cart.');
+    } catch (error: any) {
+      let msg = 'Failed to add item to cart. Make sure you only add items from one supermarket.';
+      if (error.response?.data) {
+        if (typeof error.response.data.message === 'string') {
+          msg = error.response.data.message;
+        } else if (Array.isArray(error.response.data.errors) && error.response.data.errors.length > 0) {
+          msg = error.response.data.errors[0].msg || error.response.data.errors[0].message || msg;
+        } else if (typeof error.response.data === 'string' && error.response.data.length < 100) {
+          msg = error.response.data;
+        }
+      }
+      Alert.alert('Cart Error', msg);
+    } finally {
+      setAddingId(null);
+    }
+  };
+
+  if (loading) {
     return (
       <View style={styles.miss}>
-        <Text>Store not found.</Text>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ marginTop: spacing.md }}>Loading store...</Text>
       </View>
     );
   }
 
-  const eta = `${store.etaMin}–${store.etaMax} mins`;
+  if (!store) {
+    return (
+      <View style={styles.miss}>
+        <Text>Store not found.</Text>
+        <Pressable onPress={() => navigation.goBack()}>
+          <Text style={{ color: colors.primary, marginTop: spacing.md, fontWeight: '700' }}>Go back</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  const eta = `${store.etaMin || 15}–${store.etaMax || 30} mins`;
+  const deliveryFee = store.deliveryFee !== undefined ? store.deliveryFee : 500;
 
   return (
     <View style={styles.screen}>
@@ -79,9 +133,7 @@ export function StoreScreen() {
         </Pressable>
         <Text style={styles.brand}>Goshop</Text>
         <Image
-          source={{
-            uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80',
-          }}
+          source={{ uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80' }}
           style={styles.avatar}
         />
       </View>
@@ -90,15 +142,16 @@ export function StoreScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
       >
         <ImageBackground
-          source={{ uri: store.image }}
+          source={{ uri: heroErr || !store.image ? 'https://placehold.co/400x200/png?text=No+Image' : store.image }}
           style={styles.hero}
           imageStyle={styles.heroImg}
+          onError={() => setHeroErr(true)}
         >
           <View style={styles.heroGrad} />
           <View style={styles.heroText}>
             <Text style={styles.heroTitle}>{store.name}</Text>
             <Text style={styles.heroMeta}>
-              ★ {store.rating} · {eta} · ₦{store.deliveryFee} delivery
+              ★ {store.rating || '4.5'} · {eta} · ₦{deliveryFee} delivery
             </Text>
           </View>
         </ImageBackground>
@@ -122,24 +175,15 @@ export function StoreScreen() {
               style={[styles.chip, !categoryId && styles.chipOn]}
               onPress={() => setCategoryId(null)}
             >
-              <Text style={[styles.chipTxt, !categoryId && styles.chipTxtOn]}>
-                All
-              </Text>
+              <Text style={[styles.chipTxt, !categoryId && styles.chipTxtOn]}>All</Text>
             </Pressable>
             {CATEGORY_ITEMS.map((c) => (
               <Pressable
                 key={c.id}
                 style={[styles.chip, categoryId === c.id && styles.chipOn]}
-                onPress={() =>
-                  setCategoryId(categoryId === c.id ? null : c.id)
-                }
+                onPress={() => setCategoryId(categoryId === c.id ? null : c.id)}
               >
-                <Text
-                  style={[
-                    styles.chipTxt,
-                    categoryId === c.id && styles.chipTxtOn,
-                  ]}
-                >
+                <Text style={[styles.chipTxt, categoryId === c.id && styles.chipTxtOn]}>
                   {c.label}
                 </Text>
               </Pressable>
@@ -154,15 +198,9 @@ export function StoreScreen() {
               <ProductCard
                 key={p.id}
                 product={p}
-                onOpen={() =>
-                  navigation.navigate('ProductDetail', {
-                    storeId,
-                    productId: p.id,
-                  })
-                }
-                onAdd={() => {
-                  addToCart(storeId, p, 1);
-                }}
+                isAdding={addingId === p.id}
+                onOpen={() => navigation.navigate('ProductDetail', { storeId, productId: p.id })}
+                onAdd={() => handleAddToCart(p.id)}
               />
             ))}
           </View>
@@ -174,10 +212,12 @@ export function StoreScreen() {
 
 function ProductCard({
   product,
+  isAdding,
   onOpen,
   onAdd,
 }: {
   product: Product;
+  isAdding?: boolean;
   onOpen: () => void;
   onAdd: () => void;
 }) {
@@ -191,8 +231,12 @@ function ProductCard({
             label={product.name}
           />
         </Pressable>
-        <Pressable style={styles.addBtn} onPress={onAdd}>
-          <Ionicons name="add" size={22} color={colors.surface} />
+        <Pressable style={styles.addBtn} onPress={onAdd} disabled={isAdding}>
+          {isAdding ? (
+            <ActivityIndicator size="small" color={colors.surface} />
+          ) : (
+            <Ionicons name="add" size={22} color={colors.surface} />
+          )}
         </Pressable>
       </View>
       <Pressable onPress={onOpen}>
@@ -200,7 +244,7 @@ function ProductCard({
           {product.name}
         </Text>
         <Text style={styles.pCat}>{getCategoryLabel(product.categoryId)}</Text>
-        <Text style={styles.pPrice}>₦{product.price.toLocaleString()}</Text>
+        <Text style={styles.pPrice}>₦{Number(product.price || 0).toLocaleString()}</Text>
       </Pressable>
     </View>
   );

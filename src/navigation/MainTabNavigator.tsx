@@ -3,7 +3,10 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useDemo } from '../context/DemoContext';
+import { useState, useEffect } from 'react';
+
+import { cartService } from '../services/cartService';
+
 import { CartScreen } from '../screens/CartScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { OrdersScreen } from '../screens/OrdersScreen';
@@ -21,7 +24,24 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  const { cartItemCount } = useDemo();
+  const [cartBadge, setCartBadge] = useState(0);
+
+  useEffect(() => {
+    const fetchBadge = async () => {
+      try {
+        const res = await cartService.getCart();
+        const items = res.cart?.items || res.items || [];
+        const count = items.reduce((acc: number, item: any) => acc + item.quantity, 0);
+        setCartBadge(count);
+      } catch (e) {
+        setCartBadge(0);
+      }
+    };
+    
+    fetchBadge();
+    const unsubscribe = cartService.subscribe(fetchBadge);
+    return unsubscribe;
+  }, []);
 
   return (
     <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
@@ -54,8 +74,7 @@ function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
           return isFocused ? 'person' : 'person-outline';
         })();
 
-        const badge =
-          route.name === 'Cart' && cartItemCount > 0 ? cartItemCount : 0;
+        const badge = route.name === 'Cart' ? cartBadge : 0;
 
         return (
           <Pressable

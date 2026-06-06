@@ -4,7 +4,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProductImage } from '../components/ProductImage';
-import { useDemo } from '../context/DemoContext';
+import { useEffect, useState } from 'react';
+import { orderService } from '../services/orderService';
 import type { RootStackParamList } from '../navigation/navigationRef';
 import { colors, radii, spacing, typography } from '../theme';
 
@@ -16,8 +17,25 @@ export function OrderSuccessScreen() {
   const route = useRoute<R>();
   const navigation = useNavigation<Nav>();
   const { orderId } = route.params;
-  const { orders } = useDemo();
-  const order = orders.find((o) => o.id === orderId);
+  const [order, setOrder] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    orderService.getOrderById(orderId)
+      .then(res => {
+        setOrder(res.order || res);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [orderId]);
+
+  if (loading) {
+    return (
+      <View style={styles.miss}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
 
   if (!order) {
     return (
@@ -30,8 +48,9 @@ export function OrderSuccessScreen() {
     );
   }
 
-  const thumb = order.lines[0]?.product.image;
-  const name0 = order.lines[0]?.product.name ?? 'Items';
+  const lines = order.lines || order.items || [];
+  const thumb = lines[0]?.product?.image || 'https://via.placeholder.com/100';
+  const name0 = lines[0]?.product?.name ?? 'Items';
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top + spacing.xl }]}>
@@ -42,16 +61,16 @@ export function OrderSuccessScreen() {
       </View>
       <Text style={styles.title}>Order placed successfully!</Text>
       <Text style={styles.sub}>
-        Your items from <Text style={styles.bold}>{order.storeName.split(' ')[0]}</Text> are
+        Your items from <Text style={styles.bold}>{(order.storeName || order.supermarket?.name || '').split(' ')[0]}</Text> are
         being prepared. Estimated delivery:{' '}
-        <Text style={styles.bold}>{order.etaMins} mins.</Text>
+        <Text style={styles.bold}>{order.etaMins || 15} mins.</Text>
       </Text>
       <View style={styles.card}>
         <ProductImage uri={thumb} style={styles.thumb} label={name0} />
         <View style={{ flex: 1 }}>
           <Text style={styles.oid}>#{order.id}</Text>
           <Text style={styles.sum}>
-            {order.lines.length} items · ₦{order.total.toLocaleString()}
+            {(order.lines || order.items || []).length} items · ₦{Number(order.total || 0).toLocaleString()}
           </Text>
           <Text style={styles.eta}>
             <Ionicons name="bicycle" size={14} color={colors.primary} /> Arriving soon

@@ -12,8 +12,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProductImage } from '../components/ProductImage';
-import { useDemo } from '../context/DemoContext';
-import { getProductsForStore } from '../data/products';
+import { useEffect } from 'react';
+import { supermarketService } from '../services/supermarketService';
+import { productService } from '../services/productService';
+import { cartService } from '../services/cartService';
 import type { RootStackParamList } from '../navigation/navigationRef';
 import { colors, radii, shadows, spacing, typography } from '../theme';
 
@@ -25,11 +27,32 @@ export function ProductDetailScreen() {
   const route = useRoute<R>();
   const navigation = useNavigation<Nav>();
   const { storeId, productId } = route.params;
-  const { getSupermarket, addToCart, favoriteIds, toggleFavorite } = useDemo();
+  const favoriteIds = new Set();
+  const toggleFavorite = () => Alert.alert('Favorites', 'Mock favorites list.');
   const [qty, setQty] = useState(1);
+  const [store, setStore] = useState<any>(null);
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
 
-  const store = getSupermarket(storeId);
-  const product = getProductsForStore(storeId).find((p) => p.id === productId);
+  useEffect(() => {
+    Promise.all([
+      supermarketService.getSupermarketById(storeId).catch(() => null),
+      productService.getProductById(productId).catch(() => null)
+    ]).then(([sRes, pRes]) => {
+      if (sRes) setStore(sRes.supermarket || sRes);
+      if (pRes) setProduct(pRes.product || pRes);
+      setLoading(false);
+    });
+  }, [storeId, productId]);
+
+  if (loading) {
+    return (
+      <View style={styles.miss}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   if (!store || !product) {
     return (
@@ -39,10 +62,8 @@ export function ProductDetailScreen() {
     );
   }
 
-  const lineTotal = product.price * qty;
-  const related = getProductsForStore(storeId)
-    .filter((p) => p.id !== product.id)
-    .slice(0, 4);
+  const lineTotal = Number(product.price || 0) * qty;
+  const related: any[] = []; // related is removed for now or handled by api
 
   return (
     <View style={styles.screen}>
@@ -89,7 +110,7 @@ export function ProductDetailScreen() {
           ● {store.name}
         </Text>
         <Text style={styles.title}>{product.name}</Text>
-        <Text style={styles.price}>₦{product.price.toLocaleString()}</Text>
+        <Text style={styles.price}>₦{Number(product.price || 0).toLocaleString()}</Text>
         <View style={styles.stepRow}>
           <View>
             <Text style={styles.stepLab}>Total quantity</Text>
@@ -136,7 +157,7 @@ export function ProductDetailScreen() {
               <Text numberOfLines={1} style={styles.relName}>
                 {p.name}
               </Text>
-              <Text style={styles.relPrice}>₦{p.price.toLocaleString()}</Text>
+              <Text style={styles.relPrice}>₦{Number(p.price || 0).toLocaleString()}</Text>
             </Pressable>
           ))}
         </ScrollView>
@@ -147,13 +168,39 @@ export function ProductDetailScreen() {
           <Text style={styles.barTot}>₦{lineTotal.toLocaleString()}</Text>
         </View>
         <Pressable
-          style={styles.barBtn}
-          onPress={() => {
-            addToCart(storeId, product, qty);
-            navigation.goBack();
+          style={[styles.barBtn, adding && { opacity: 0.8 }]}
+          disabled={adding}
+          onPress={async () => {
+            if (adding) return;
+            setAdding(true);
+            try {
+              await cartService.addItem(productId, qty);
+              Alert.alert('Success', 'Added to cart!', [
+                { text: 'Continue shopping', style: 'cancel', onPress: () => navigation.goBack() },
+                { text: 'View cart', onPress: () => navigation.navigate('Cart' as never) }
+              ]);
+            } catch (error: any) {
+              let msg = 'Failed to add item to cart. Make sure you only add items from one supermarket.';
+              if (error.response?.data) {
+                if (typeof error.response.data.message === 'string') {
+                  msg = error.response.data.message;
+                } else if (Array.isArray(error.response.data.errors) && error.response.data.errors.length > 0) {
+                  msg = error.response.data.errors[0].msg || error.response.data.errors[0].message || msg;
+                } else if (typeof error.response.data === 'string' && error.response.data.length < 100) {
+                  msg = error.response.data;
+                }
+              }
+              Alert.alert('Error', msg);
+            } finally {
+              setAdding(false);
+            }
           }}
         >
-          <Ionicons name="bag-handle-outline" size={20} color={colors.surface} />
+          {adding ? (
+            <ActivityIndicator size="small" color={colors.surface} />
+          ) : (
+            <Ionicons name="bag-handle-outline" size={20} color={colors.surface} />
+          )}
           <Text style={styles.barBtnTxt}>
             Add to cart – ₦{lineTotal.toLocaleString()}
           </Text>

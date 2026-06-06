@@ -30,13 +30,21 @@ export function LoginScreen({ navigation }: Props) {
   const [showPass, setShowPass] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const onLogin = () => {
+  const onLogin = async () => {
     if (busy) return;
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter your email and password.');
+      return;
+    }
     setBusy(true);
-    setTimeout(() => {
+    try {
+      await signIn(email, password);
+    } catch (error: any) {
+      const msg = error.response?.data?.message || 'Login failed. Please try again.';
+      Alert.alert('Login Error', msg);
+    } finally {
       setBusy(false);
-      signIn();
-    }, 600);
+    }
   };
 
   return (

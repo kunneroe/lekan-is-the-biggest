@@ -18,7 +18,7 @@ import { colors, radii, spacing } from '../../theme';
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
 export function RegisterScreen({ navigation }: Props) {
-  const { signIn } = useAuth();
+  const { register } = useAuth();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -28,17 +28,25 @@ export function RegisterScreen({ navigation }: Props) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const onCreate = () => {
+  const onCreate = async () => {
     if (busy) return;
+    if (!name || !email || !password || !phone) {
+      Alert.alert('Error', 'Please fill out all fields.');
+      return;
+    }
     if (password !== confirm) {
       Alert.alert('Passwords', 'Passwords do not match.');
       return;
     }
     setBusy(true);
-    setTimeout(() => {
+    try {
+      await register({ fullName: name, email, password, phone });
+    } catch (error: any) {
+      const msg = error.response?.data?.message || 'Registration failed. Please try again.';
+      Alert.alert('Registration Error', msg);
+    } finally {
       setBusy(false);
-      signIn();
-    }, 700);
+    }
   };
 
   const field = 'mintFlat' as const;

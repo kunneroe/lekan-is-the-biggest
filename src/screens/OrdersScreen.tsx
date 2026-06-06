@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import { useState } from 'react';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useState, useCallback } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -11,18 +12,42 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProductImage } from '../components/ProductImage';
-import { useDemo, type MockOrder } from '../context/DemoContext';
+import { orderService } from '../services/orderService';
 import { navigateRoot } from '../navigation/navigationRef';
 import { colors, radii, shadows, spacing, typography } from '../theme';
 
 export function OrdersScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
-  const { orders } = useDemo();
   const [tab, setTab] = useState<'active' | 'past'>('active');
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const active = orders.filter((o) => o.status === 'active');
-  const past = orders.filter((o) => o.status !== 'active');
+  useFocusEffect(
+    useCallback(() => {
+      const fetchOrders = async () => {
+        try {
+          const data = await orderService.getOrders();
+          setOrders(data.orders || data || []);
+        } catch (error: any) {
+          Alert.alert('Error', error.response?.data?.message || 'Failed to load order history.');
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      setLoading(true);
+      fetchOrders();
+    }, [])
+  );
+
+  const isActiveStatus = (status: string) => {
+    const s = (status || '').toLowerCase();
+    return ['active', 'pending', 'processing', 'on_the_way', 'out_for_delivery', 'accepted'].includes(s);
+  };
+
+  const active = orders.filter((o) => isActiveStatus(o.status));
+  const past = orders.filter((o) => !isActiveStatus(o.status));
 
   return (
     <View style={styles.screen}>
@@ -59,56 +84,64 @@ export function OrdersScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {tab === 'active' && active.length === 0 ? (
-          <View style={styles.emptyWrap}>
-            <Ionicons name="cube-outline" size={56} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>No active orders</Text>
-            <Text style={styles.emptySub}>
-              After you place an order at checkout, it will appear here with
-              tracking and rider updates.
-            </Text>
-            <Pressable
-              style={styles.emptyBtn}
-              onPress={() => navigation.navigate('Home' as never)}
-            >
-              <Text style={styles.emptyBtnTxt}>Start shopping</Text>
-            </Pressable>
+        {loading ? (
+          <View style={{ marginTop: spacing.xxxl, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={colors.primary} />
           </View>
-        ) : null}
-        {tab === 'active'
-          ? active.map((o) => <ActiveCard key={o.id} order={o} />)
-          : null}
-        {tab === 'past' && past.length === 0 ? (
-          <View style={styles.emptyWrap}>
-            <Ionicons name="time-outline" size={56} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>No past orders yet</Text>
-            <Text style={styles.emptySub}>
-              Completed and delivered orders will be listed here for easy
-              reordering.
-            </Text>
-            <Pressable
-              style={styles.emptyBtn}
-              onPress={() => navigation.navigate('Home' as never)}
-            >
-              <Text style={styles.emptyBtnTxt}>Browse supermarkets</Text>
-            </Pressable>
-          </View>
-        ) : null}
-        {tab === 'past' && past.length > 0 ? (
+        ) : (
           <>
-            <View style={styles.pastHead}>
-              <Text style={styles.pastTitle}>Past orders</Text>
-              <Pressable onPress={() => Alert.alert('View all', 'Showing all mock past orders.')}>
-                <Text style={styles.viewAll}>View all</Text>
-              </Pressable>
-            </View>
-            <View style={styles.pastBox}>
-              {past.map((o) => (
-                <PastRow key={o.id} order={o} />
-              ))}
-            </View>
+            {tab === 'active' && active.length === 0 ? (
+              <View style={styles.emptyWrap}>
+                <Ionicons name="cube-outline" size={56} color={colors.textMuted} />
+                <Text style={styles.emptyTitle}>No active orders</Text>
+                <Text style={styles.emptySub}>
+                  After you place an order at checkout, it will appear here with
+                  tracking and rider updates.
+                </Text>
+                <Pressable
+                  style={styles.emptyBtn}
+                  onPress={() => navigation.navigate('Home' as never)}
+                >
+                  <Text style={styles.emptyBtnTxt}>Start shopping</Text>
+                </Pressable>
+              </View>
+            ) : null}
+            {tab === 'active'
+              ? active.map((o) => <ActiveCard key={o.id} order={o} />)
+              : null}
+            {tab === 'past' && past.length === 0 ? (
+              <View style={styles.emptyWrap}>
+                <Ionicons name="time-outline" size={56} color={colors.textMuted} />
+                <Text style={styles.emptyTitle}>No past orders yet</Text>
+                <Text style={styles.emptySub}>
+                  Completed and delivered orders will be listed here for easy
+                  reordering.
+                </Text>
+                <Pressable
+                  style={styles.emptyBtn}
+                  onPress={() => navigation.navigate('Home' as never)}
+                >
+                  <Text style={styles.emptyBtnTxt}>Browse supermarkets</Text>
+                </Pressable>
+              </View>
+            ) : null}
+            {tab === 'past' && past.length > 0 ? (
+              <>
+                <View style={styles.pastHead}>
+                  <Text style={styles.pastTitle}>Past orders</Text>
+                  <Pressable onPress={() => Alert.alert('View all', 'Showing all past orders.')}>
+                    <Text style={styles.viewAll}>View all</Text>
+                  </Pressable>
+                </View>
+                <View style={styles.pastBox}>
+                  {past.map((o) => (
+                    <PastRow key={o.id} order={o} />
+                  ))}
+                </View>
+              </>
+            ) : null}
           </>
-        ) : null}
+        )}
       </ScrollView>
     </View>
   );
@@ -122,28 +155,33 @@ function ImageAvatar() {
   );
 }
 
-function ActiveCard({ order }: { order: MockOrder }) {
-  const badge =
-    order.stepIndex >= 4 ? 'ON THE WAY' : 'PROCESSING';
-  const badgeStyle =
-    order.stepIndex >= 4 ? styles.badgeGreen : styles.badgeOrange;
+function ActiveCard({ order }: { order: any }) {
+  // If the backend provides lines, use them, otherwise fallback to empty array
+  const lines = order.lines || order.items || [];
+  const firstImage = lines[0]?.product?.image || lines[0]?.image || 'https://via.placeholder.com/100';
+  const storeName = order.storeName || order.supermarket?.name || 'Supermarket';
+  
+  const stepIndex = order.stepIndex || 0;
+  const badge = stepIndex >= 4 ? 'ON THE WAY' : 'PROCESSING';
+  const badgeStyle = stepIndex >= 4 ? styles.badgeGreen : styles.badgeOrange;
+
   return (
     <View style={styles.card}>
       <View style={styles.cardTop}>
         <ProductImage
-          uri={order.lines[0]?.product.image}
+          uri={firstImage}
           style={styles.storeThumb}
-          label={order.storeName}
+          label={storeName}
         />
         <View style={{ flex: 1 }}>
-          <Text style={styles.storeName}>{order.storeName}</Text>
-          <Text style={styles.time}>{order.createdAt}</Text>
+          <Text style={styles.storeName}>{storeName}</Text>
+          <Text style={styles.time}>{new Date(order.createdAt).toLocaleDateString()}</Text>
         </View>
         <View style={[styles.badge, badgeStyle]}>
           <Text
             style={[
               styles.badgeTxt,
-              order.stepIndex >= 4 ? styles.badgeTxtDark : styles.badgeTxtOrange,
+              stepIndex >= 4 ? styles.badgeTxtDark : styles.badgeTxtOrange,
             ]}
           >
             {badge}
@@ -154,9 +192,9 @@ function ActiveCard({ order }: { order: MockOrder }) {
       <View style={styles.mid}>
         <View>
           <Text style={styles.ot}>Order total</Text>
-          <Text style={styles.op}>₦{order.total.toLocaleString()}</Text>
+          <Text style={styles.op}>₦{Number(order.total || 0).toLocaleString()}</Text>
         </View>
-        <Text style={styles.items}>{order.lines.length} items</Text>
+        <Text style={styles.items}>{lines.length} items</Text>
       </View>
       <View style={styles.actions}>
         <Pressable
@@ -168,7 +206,7 @@ function ActiveCard({ order }: { order: MockOrder }) {
         </Pressable>
         <Pressable
           style={styles.phone}
-          onPress={() => Alert.alert('Call', 'Mock rider call.')}
+          onPress={() => Alert.alert('Call Rider', 'This would call the assigned rider.')}
         >
           <Ionicons name="call" size={18} color={colors.text} />
         </Pressable>
@@ -177,22 +215,23 @@ function ActiveCard({ order }: { order: MockOrder }) {
   );
 }
 
-function PastRow({ order }: { order: MockOrder }) {
+function PastRow({ order }: { order: any }) {
+  const storeName = order.storeName || order.supermarket?.name || 'Supermarket';
+
   return (
     <View style={styles.pastRow}>
       <View style={styles.pastIcon}>
         <Ionicons name="storefront-outline" size={20} color={colors.primary} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.pastStore}>{order.storeName}</Text>
-        <Text style={styles.pastDate}>{order.createdAt}</Text>
+        <Text style={styles.pastStore}>{storeName}</Text>
+        <Text style={styles.pastDate}>{new Date(order.createdAt).toLocaleDateString()}</Text>
       </View>
-      <Text style={styles.pastPrice}>₦{order.total.toLocaleString()}</Text>
+      <Text style={styles.pastPrice}>₦{Number(order.total || 0).toLocaleString()}</Text>
       <Pressable
         style={styles.reorder}
         onPress={() => {
-          Alert.alert('Reorder', 'Cart cleared and items re-added (mock).');
-          navigateRoot('Store', { storeId: order.storeId });
+          navigateRoot('Store', { storeId: order.storeId || order.supermarketId });
         }}
       >
         <Text style={styles.reorderTxt}>Reorder</Text>

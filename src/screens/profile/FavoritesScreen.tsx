@@ -5,7 +5,7 @@ import type { RootStackParamList } from '../../navigation/navigationRef';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProductImage } from '../../components/ProductImage';
-import { useDemo } from '../../context/DemoContext';
+
 import { getCategoryLabel, getProductById } from '../../data/products';
 import { navigateRoot } from '../../navigation/navigationRef';
 import { colors, radii, shadows, spacing, typography } from '../../theme';
@@ -14,7 +14,9 @@ export function FavoritesScreen() {
   const insets = useSafeAreaInsets();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { favoriteIds, addToCart, toggleFavorite } = useDemo();
+  const favoriteIds = new Set<string>();
+  const toggleFavorite = (id: string) => {};
+  const addToCart = async (storeId: string, product: any, qty: number) => {};
   const products = [...favoriteIds]
     .map((id) => getProductById(id))
     .filter(Boolean);
@@ -61,7 +63,7 @@ export function FavoritesScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.name}>{p.name}</Text>
                 <Text style={styles.cat}>{getCategoryLabel(p.categoryId)}</Text>
-                <Text style={styles.price}>₦{p.price.toLocaleString()}</Text>
+                <Text style={styles.price}>₦{Number(p.price || 0).toLocaleString()}</Text>
               </View>
             </Pressable>
             <View style={styles.actions}>

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Supermarket } from '../../data/supermarkets';
 import { colors, radii, shadows, spacing, typography } from '../../theme';
@@ -10,16 +11,22 @@ type Props = {
 
 export function SupermarketListCard({ store, onPress }: Props) {
   const eta = `${store.etaMin} - ${store.etaMax} mins`;
-  const fee = `₦${store.deliveryFee.toLocaleString()} delivery`;
+  const fee = `₦${Number(store.deliveryFee || 0).toLocaleString()} delivery`;
+  const [imgErr, setImgErr] = useState(false);
+  const fallback = 'https://placehold.co/150x150/png?text=No+Image';
 
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [pressed && { opacity: 0.92 }]}>
       <View style={styles.card}>
         <View style={styles.imageWrap}>
-          <Image source={{ uri: store.image }} style={styles.image} />
+          <Image 
+            source={{ uri: imgErr || !store.image ? fallback : store.image }} 
+            style={styles.image} 
+            onError={() => setImgErr(true)}
+          />
           <View style={styles.ratingBadge}>
             <Ionicons name="star" size={12} color={colors.star} />
-            <Text style={styles.ratingText}>{store.rating.toFixed(1)}</Text>
+            <Text style={styles.ratingText}>{Number(store.rating || 0).toFixed(1)}</Text>
           </View>
         </View>
         <View style={styles.body}>

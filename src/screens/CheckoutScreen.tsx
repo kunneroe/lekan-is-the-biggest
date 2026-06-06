@@ -3,9 +3,10 @@ import {
   useRoute,
   useNavigation,
   type RouteProp,
+  useFocusEffect,
 } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,7 +19,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProductImage } from '../components/ProductImage';
-import { useDemo } from '../context/DemoContext';
+
+import { cartService } from '../services/cartService';
+import { supermarketService } from '../services/supermarketService';
+import { orderService } from '../services/orderService';
+import { paymentService } from '../services/paymentService';
 import type { RootStackParamList } from '../navigation/navigationRef';
 import { colors, radii, shadows, spacing, typography } from '../theme';
 
@@ -36,26 +41,54 @@ export function CheckoutScreen() {
   const route = useRoute<R>();
   const navigation = useNavigation() as Nav;
   const { storeId } = route.params;
-  const {
-    cartLines,
-    cartSubtotal,
-    cartDeliveryFee,
-    cartServiceFee,
-    cartTotal,
-    savedAddresses,
-    selectedAddressId,
-    placeOrder,
-    getSupermarket,
-  } = useDemo();
+  
+  const [savedAddresses] = useState([
+    { id: '1', label: 'Home', line: '123 Main St, Lagos' }
+  ]);
+  const [selectedAddressId] = useState('1');
 
+  const [cart, setCart] = useState<any>(null);
+  const [store, setStore] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  
   const [note, setNote] = useState('Call me when you get to the gate');
   const [payId, setPayId] = useState('card');
   const [placing, setPlacing] = useState(false);
 
-  const store = getSupermarket(storeId);
-  const addr = savedAddresses.find((a) => a.id === selectedAddressId);
+  const fetchCart = useCallback(async () => {
+    try {
+      setLoading(true);
+      const cartData = await cartService.getCart();
+      const cartObj = cartData.cart || cartData;
+      setCart(cartObj);
+      
+      const storeData = await supermarketService.getSupermarketById(storeId);
+      setStore(storeData.supermarket || storeData);
+    } catch (error) {
+      console.log('Error fetching checkout data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [storeId]);
 
-  if (!store || cartLines.length === 0 || !addr) {
+  useFocusEffect(
+    useCallback(() => {
+      fetchCart();
+    }, [fetchCart])
+  );
+
+  const addr = savedAddresses.find((a) => a.id === selectedAddressId);
+  const items = cart?.items || [];
+
+  if (loading) {
+    return (
+      <View style={styles.miss}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (!store || items.length === 0 || !addr) {
     return (
       <View style={styles.miss}>
         <Text style={typography.body}>Nothing to checkout.</Text>
@@ -65,6 +98,83 @@ export function CheckoutScreen() {
       </View>
     );
   }
+
+  const subtotal = Number(cart.subtotal || 0);
+  const deliveryFee = Number(cart.deliveryFee || store?.deliveryFee || 0);
+  const serviceFee = Number(cart.serviceFee || 0);
+  const total = Number(cart.total || (subtotal + deliveryFee + serviceFee));
+
+  const handlePlaceOrder = async () => {
+    if (placing) return;
+    
+    if (!selectedAddressId || selectedAddressId === '1' || !addr) {
+      Alert.alert('Error', 'Please add and select a delivery address first.');
+      return;
+    }
+
+    setPlacing(true);
+    
+    const labelMap: Record<string, string> = {
+      card: 'CARD',
+      transfer: 'TRANSFER',
+      pod: 'CASH',
+    };
+
+    try {
+      const orderRes = await orderService.createOrder({
+        addressId: addr.id,
+        paymentMethod: labelMap[payId] ?? 'CARD',
+        deliveryNote: note,
+      });
+      
+      // Assume backend returns { order: { id: '...' } } or similar
+      const orderId = orderRes.order?.id || orderRes.id;
+      
+      if (!orderId) throw new Error('Order creation failed on backend.');
+
+      // Now call mock-confirm
+      await paymentService.mockConfirm(orderId);
+
+      // Clear the local cart UI state via the API (or rely on backend auto-clear depending on architecture)
+      try {
+        await cartService.clearCart();
+      } catch (e) {
+        // Ignore errors if backend already cleared it on successful order
+      }
+
+      Alert.alert(
+        'Order placed',
+        `Your order is confirmed. Track it anytime from the Orders tab.`,
+        [
+          {
+            text: 'Continue',
+            onPress: () =>
+              navigation.reset({
+                index: 1,
+                routes: [
+                  { name: 'MainTabs' },
+                  { name: 'OrderSuccess', params: { orderId } },
+                ],
+              }),
+          },
+        ]
+      );
+    } catch (error: any) {
+      let msg = 'Failed to place order. Please try again.';
+      if (error.response?.data) {
+        if (typeof error.response.data.message === 'string') {
+          msg = error.response.data.message;
+        } else if (Array.isArray(error.response.data.errors) && error.response.data.errors.length > 0) {
+          msg = error.response.data.errors[0].msg || error.response.data.errors[0].message || msg;
+        } else if (typeof error.response.data === 'string' && error.response.data.length < 100) {
+          msg = error.response.data;
+        }
+      }
+      Alert.alert('Checkout Error', msg);
+    } finally {
+      setPlacing(false);
+    }
+  };
 
   return (
     <ScrollView
@@ -136,82 +246,45 @@ export function CheckoutScreen() {
         </View>
       </View>
       <View style={styles.card}>
-        {cartLines.map((l) => (
-          <View key={l.lineId} style={styles.itemRow}>
+        {items.map((l: any) => (
+          <View key={l.id || l.product?.id} style={styles.itemRow}>
             <ProductImage
-              uri={l.product.image}
+              uri={l.product?.image}
               style={styles.thumb}
-              label={l.product.name}
+              label={l.product?.name}
             />
             <View style={{ flex: 1 }}>
-              <Text style={styles.iname}>{l.product.name}</Text>
-              <Text style={styles.iqty}>Qty: {l.qty}</Text>
+              <Text style={styles.iname}>{l.product?.name}</Text>
+              <Text style={styles.iqty}>Qty: {l.quantity}</Text>
             </View>
             <Text style={styles.iprice}>
-              ₦{(l.product.price * l.qty).toLocaleString()}
+              ₦{(Number(l.product?.price || 0) * l.quantity).toLocaleString()}
             </Text>
           </View>
         ))}
         <View style={styles.div} />
         <View style={styles.sumRow}>
           <Text style={styles.sumLab}>Subtotal</Text>
-          <Text style={styles.sumVal}>₦{cartSubtotal.toLocaleString()}</Text>
+          <Text style={styles.sumVal}>₦{Number(subtotal || 0).toLocaleString()}</Text>
         </View>
         <View style={styles.sumRow}>
           <Text style={styles.sumLab}>Delivery fee</Text>
-          <Text style={styles.sumVal}>₦{cartDeliveryFee.toLocaleString()}</Text>
+          <Text style={styles.sumVal}>₦{Number(deliveryFee || 0).toLocaleString()}</Text>
         </View>
         <View style={styles.sumRow}>
           <Text style={styles.sumLab}>Service fee</Text>
-          <Text style={styles.sumVal}>₦{cartServiceFee.toLocaleString()}</Text>
+          <Text style={styles.sumVal}>₦{Number(serviceFee || 0).toLocaleString()}</Text>
         </View>
         <View style={styles.div} />
         <View style={styles.sumRow}>
           <Text style={styles.totalLab}>Total</Text>
-          <Text style={styles.totalVal}>₦{cartTotal.toLocaleString()}</Text>
+          <Text style={styles.totalVal}>₦{Number(total || 0).toLocaleString()}</Text>
         </View>
       </View>
       <Pressable
         style={[styles.cta, placing && styles.ctaDisabled]}
         disabled={placing}
-        onPress={() => {
-          if (placing) return;
-          setPlacing(true);
-          const labelMap: Record<string, string> = {
-            card: 'Debit/Credit Card',
-            transfer: 'Bank Transfer',
-            pod: 'Pay on Delivery',
-          };
-          setTimeout(() => {
-            const oid = placeOrder({
-              storeId,
-              addressLabel: addr.label,
-              addressLine: addr.line,
-              deliveryNote: note,
-              paymentMethod: labelMap[payId] ?? payId,
-            });
-            setPlacing(false);
-            if (oid) {
-              Alert.alert(
-                'Order placed',
-                `Your order ${oid} is confirmed. Track it anytime from the Orders tab.`,
-                [
-                  {
-                    text: 'Continue',
-                    onPress: () =>
-                      navigation.reset({
-                        index: 1,
-                        routes: [
-                          { name: 'MainTabs' },
-                          { name: 'OrderSuccess', params: { orderId: oid } },
-                        ],
-                      }),
-                  },
-                ],
-              );
-            }
-          }, 900);
-        }}
+        onPress={handlePlaceOrder}
       >
         {placing ? (
           <>

@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AuthTextField } from '../../components/auth/AuthTextField';
-import { useDemo } from '../../context/DemoContext';
+
 import type { AuthStackParamList } from '../../navigation/AuthNavigator';
 import { colors, radii, spacing, typography } from '../../theme';
 
@@ -21,7 +21,6 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'ForgotPassword'>;
 
 export function ForgotPasswordScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const { user } = useDemo();
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
 

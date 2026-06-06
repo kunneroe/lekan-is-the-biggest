@@ -7,14 +7,19 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import { Alert } from 'react-native';
+import { authService } from '../services/authService';
+import { setLogoutHandler } from '../services/api';
 
-const MOCK_AUTH_KEY = '@goshop_mock_signed_in';
+type User = any; // Can be defined strictly later
 
 type AuthContextValue = {
   isSignedIn: boolean;
   isAuthReady: boolean;
-  signIn: () => Promise<void>;
-  signOut: () => Promise<void>;
+  user: User | null;
+  signIn: (email: string, password: string) => Promise<void>;
+  register: (userData: any) => Promise<void>;
+  signOut: (showAlert?: boolean) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -22,37 +27,104 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  const signOut = useCallback(async (showAlert = false) => {
+    await AsyncStorage.removeItem('userToken');
+    await AsyncStorage.removeItem('refreshToken');
+    await AsyncStorage.removeItem('userData');
+    setIsSignedIn(false);
+    setUser(null);
+    if (showAlert === true) {
+      Alert.alert('Session Expired', 'Please login again.');
+    }
+  }, []);
 
   useEffect(() => {
-    let alive = true;
-    AsyncStorage.getItem(MOCK_AUTH_KEY).then((v) => {
-      if (!alive) return;
-      setIsSignedIn(v === 'true');
-      setIsAuthReady(true);
+    setLogoutHandler(() => {
+      void signOut(true);
     });
+
+    let alive = true;
+    const checkAuth = async () => {
+      try {
+        const token = await AsyncStorage.getItem('userToken');
+        const userStr = await AsyncStorage.getItem('userData');
+        
+        if (token && userStr) {
+          try {
+            const parsedUser = JSON.parse(userStr);
+            setUser(parsedUser);
+            setIsSignedIn(true);
+          } catch (e) {
+            console.error('Failed to parse cached user data');
+          }
+        } else if (token) {
+          // Fallback if token exists but no user data
+          try {
+            const res = await authService.getProfile();
+            const userData = res.user ? res.user : res;
+            if (!alive) return;
+            setUser(userData);
+            setIsSignedIn(true);
+            await AsyncStorage.setItem('userData', JSON.stringify(userData));
+          } catch (error: any) {
+            console.log('Profile fetch failed, but keeping session active if 404', error.message);
+            // Do NOT force a logout here if it's a 404 missing endpoint error.
+            if (error.response?.status !== 404) {
+               // Only sign out if it's a strict 401 unauthorized
+               if (error.response?.status === 401) await signOut();
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to check auth state:', error);
+      } finally {
+        if (alive) setIsAuthReady(true);
+      }
+    };
+
+    checkAuth();
+
     return () => {
       alive = false;
     };
-  }, []);
+  }, [signOut]);
 
-  const signIn = useCallback(async () => {
-    await AsyncStorage.setItem(MOCK_AUTH_KEY, 'true');
+  const signIn = useCallback(async (email: string, password: string) => {
+    const data = await authService.login({ identifier: email, password });
+    const { user, accessToken, refreshToken } = data;
+    
+    if (accessToken) await AsyncStorage.setItem('userToken', accessToken);
+    if (refreshToken) await AsyncStorage.setItem('refreshToken', refreshToken);
+    if (user) await AsyncStorage.setItem('userData', JSON.stringify(user));
+    
+    setUser(user);
     setIsSignedIn(true);
   }, []);
 
-  const signOut = useCallback(async () => {
-    await AsyncStorage.removeItem(MOCK_AUTH_KEY);
-    setIsSignedIn(false);
+  const registerUser = useCallback(async (userData: any) => {
+    const data = await authService.register(userData);
+    const { user, accessToken, refreshToken } = data;
+    
+    if (accessToken) await AsyncStorage.setItem('userToken', accessToken);
+    if (refreshToken) await AsyncStorage.setItem('refreshToken', refreshToken);
+    if (user) await AsyncStorage.setItem('userData', JSON.stringify(user));
+    
+    setUser(user);
+    setIsSignedIn(true);
   }, []);
 
   const value = useMemo(
     (): AuthContextValue => ({
       isSignedIn,
       isAuthReady,
+      user,
       signIn,
+      register: registerUser,
       signOut,
     }),
-    [isSignedIn, isAuthReady, signIn, signOut],
+    [isSignedIn, isAuthReady, user, signIn, registerUser, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

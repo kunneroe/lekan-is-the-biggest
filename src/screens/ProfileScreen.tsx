@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
-import { useDemo } from '../context/DemoContext';
+
 import { navigateRoot } from '../navigation/navigationRef';
 import { colors, radii, shadows, spacing, typography } from '../theme';
 
@@ -25,8 +25,8 @@ type Row = {
 
 export function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { signOut } = useAuth();
-  const { user, favoriteIds } = useDemo();
+  const { user, signOut } = useAuth() as any;
+  const favoriteIds = new Set();
 
   const accountRows: Row[] = [
     {
@@ -114,12 +114,12 @@ export function ProfileScreen() {
               <View style={styles.dot} />
             </View>
           </Pressable>
-          <Image source={{ uri: user.avatar }} style={styles.avatarSm} />
+          <Image source={{ uri: user?.avatar || 'https://via.placeholder.com/100' }} style={styles.avatarSm} />
         </View>
       </View>
       <View style={styles.card}>
         <View style={styles.avatarWrap}>
-          <Image source={{ uri: user.avatar }} style={styles.avatar} />
+          <Image source={{ uri: user?.avatar || 'https://via.placeholder.com/100' }} style={styles.avatar} />
           <Pressable
             style={styles.edit}
             onPress={() => Alert.alert('Edit profile', 'Mock profile editor.')}
@@ -127,8 +127,8 @@ export function ProfileScreen() {
             <Ionicons name="pencil" size={14} color={colors.surface} />
           </Pressable>
         </View>
-        <Text style={styles.name}>{user.name}</Text>
-        <Text style={styles.phone}>{user.phone}</Text>
+        <Text style={styles.name}>{user?.FullName || user?.name || 'User'}</Text>
+        <Text style={styles.phone}>{user?.phone || 'No phone'}</Text>
       </View>
       <Text style={styles.sec}>Account settings</Text>
       <View style={styles.menuCard}>

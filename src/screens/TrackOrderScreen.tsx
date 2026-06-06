@@ -1,30 +1,93 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRoute, type RouteProp } from '@react-navigation/native';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRoute, type RouteProp, useNavigation } from '@react-navigation/native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProductImage } from '../components/ProductImage';
-import { useDemo } from '../context/DemoContext';
+import { trackingService } from '../services/trackingService';
 import type { RootStackParamList } from '../navigation/navigationRef';
 import { colors, radii, spacing, typography } from '../theme';
 
 type R = RouteProp<RootStackParamList, 'TrackOrder'>;
+
 export function TrackOrderScreen() {
   const insets = useSafeAreaInsets();
   const route = useRoute<R>();
+  const navigation = useNavigation();
   const { orderId } = route.params;
-  const { orders, trackingSteps, advanceOrderStep } = useDemo();
-  const order = orders.find((o) => o.id === orderId);
 
-  if (!order) {
+  const [trackingData, setTrackingData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
+    const fetchTracking = async (isPoll = false) => {
+      try {
+        const data = await trackingService.getTrackingUpdate(orderId);
+        setTrackingData(data.tracking || data || null);
+      } catch (error: any) {
+        if (!isPoll) {
+          Alert.alert('Error', error.response?.data?.message || 'Failed to load tracking data.');
+        }
+      } finally {
+        if (!isPoll) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchTracking(); // initial fetch
+
+    intervalId = setInterval(() => {
+      fetchTracking(true);
+    }, 10000); // Poll every 10 seconds
+
+    return () => {
+      clearInterval(intervalId); // Cleanup interval on unmount
+    };
+  }, [orderId]);
+
+  if (loading) {
     return (
       <View style={styles.miss}>
-        <Text>Order not found.</Text>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
-  const step = order.stepIndex;
-  const progress = (step + 1) / trackingSteps.length;
+  if (!trackingData) {
+    return (
+      <View style={styles.miss}>
+        <Text>Order tracking not found.</Text>
+        <Pressable onPress={() => navigation.goBack()}>
+          <Text style={{ color: colors.primary, marginTop: spacing.md, fontWeight: '700' }}>Go back</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  // Extract from backend payload, falling back to safe defaults
+  const order = trackingData.order || trackingData;
+  const step = trackingData.stepIndex || order.stepIndex || 0;
+  
+  // Example steps, ideally backend provides this
+  const trackingSteps = trackingData.trackingSteps || [
+    'Order placed',
+    'Store accepted order',
+    'Rider at store',
+    'Heading to you',
+    'Arrived',
+  ];
+  
+  const progress = Math.min((step + 1) / trackingSteps.length, 1);
+  const rider = trackingData.rider || order.rider || { name: 'Assigning rider...', vehicle: 'N/A', plate: 'N/A' };
+  const lines = order.lines || order.items || [];
+  const etaMins = trackingData.etaMins || order.etaMins || 15;
+  const total = order.total || 0;
+  const addressLabel = order.addressLabel || 'YOUR ADDRESS';
+  const addressLine = order.addressLine || '';
+  const deliveryNote = order.deliveryNote || 'No note provided';
 
   return (
     <ScrollView
@@ -34,18 +97,17 @@ export function TrackOrderScreen() {
       <View style={[styles.map, { paddingTop: insets.top }]}>
         <Text style={styles.mapLabel}>Map preview</Text>
         <Ionicons name="map" size={64} color={colors.mintStrong} />
-        <Text style={styles.mapSub}>Live maps are mocked for this demo</Text>
-        <Pressable
-          style={styles.sim}
-          onPress={() => advanceOrderStep(order.id)}
-        >
-          <Text style={styles.simTxt}>Simulate next step (demo)</Text>
-        </Pressable>
+        <Text style={styles.mapSub}>Live maps are simulated. Polling backend every 10s.</Text>
+        {trackingData.riderLocation && (
+          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, marginTop: 4 }}>
+            Rider GPS: {trackingData.riderLocation.lat}, {trackingData.riderLocation.lng}
+          </Text>
+        )}
       </View>
       <View style={styles.sheet}>
         <View style={styles.row1}>
-          <Text style={styles.eta}>Arriving in ~{order.etaMins} mins</Text>
-          <Text style={styles.price}>₦{order.total.toLocaleString()}</Text>
+          <Text style={styles.eta}>Arriving in ~{etaMins} mins</Text>
+          <Text style={styles.price}>₦{Number(total || 0).toLocaleString()}</Text>
         </View>
         <View style={styles.barBg}>
           <View style={[styles.barFg, { width: `${progress * 100}%` }]} />
@@ -59,7 +121,9 @@ export function TrackOrderScreen() {
               {trackingSteps[Math.min(step, trackingSteps.length - 1)]}
             </Text>
             <Text style={styles.stSub}>
-              {order.rider.name} is handling your order
+              {rider.name !== 'Assigning rider...' 
+                ? `${rider.name} is handling your order` 
+                : 'Waiting for rider assignment...'}
             </Text>
           </View>
         </View>
@@ -69,9 +133,9 @@ export function TrackOrderScreen() {
             <Ionicons name="person" size={28} color={colors.textSecondary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.riderName}>{order.rider.name}</Text>
+            <Text style={styles.riderName}>{rider.name}</Text>
             <Text style={styles.riderV}>
-              {order.rider.vehicle} · {order.rider.plate}
+              {rider.vehicle} · {rider.plate}
             </Text>
           </View>
           <Pressable style={styles.iconBtn}>
@@ -84,25 +148,25 @@ export function TrackOrderScreen() {
         <View style={styles.box}>
           <Ionicons name="location-outline" size={18} color={colors.textSecondary} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.boxLab}>DELIVERING TO {order.addressLabel.toUpperCase()}</Text>
-            <Text style={styles.boxTxt}>{order.addressLine}</Text>
+            <Text style={styles.boxLab}>DELIVERING TO {addressLabel.toUpperCase()}</Text>
+            <Text style={styles.boxTxt}>{addressLine}</Text>
           </View>
         </View>
         <View style={[styles.box, styles.noteBox]}>
           <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
           <View style={{ flex: 1 }}>
             <Text style={styles.boxLab}>DELIVERY NOTE</Text>
-            <Text style={styles.noteItalic}>“{order.deliveryNote}”</Text>
+            <Text style={styles.noteItalic}>“{deliveryNote}”</Text>
           </View>
         </View>
         <Text style={styles.sec}>Order items</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {order.lines.slice(0, 4).map((l) => (
+          {lines.slice(0, 4).map((l: any) => (
             <ProductImage
-              key={l.lineId}
-              uri={l.product.image}
+              key={l.id || l.product?.id || Math.random()}
+              uri={l.product?.image}
               style={styles.mini}
-              label={l.product.name}
+              label={l.product?.name || 'Item'}
             />
           ))}
         </ScrollView>
@@ -121,15 +185,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   mapLabel: { color: colors.surface, fontWeight: '700', marginBottom: spacing.sm },
-  mapSub: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: spacing.sm },
-  sim: {
-    marginTop: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: radii.pill,
-  },
-  simTxt: { color: colors.surface, fontSize: 12 },
+  mapSub: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: spacing.sm, textAlign: 'center', paddingHorizontal: spacing.xl },
   sheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: 24,
