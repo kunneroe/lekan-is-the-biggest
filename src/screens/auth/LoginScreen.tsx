@@ -15,6 +15,7 @@ import { AuthTextField } from '../../components/auth/AuthTextField';
 import { useAuth } from '../../context/AuthContext';
 import type { AuthStackParamList } from '../../navigation/AuthNavigator';
 import { colors, radii, spacing } from '../../theme';
+import { parseApiError } from '../../utils/parseApiError';
 
 const ACCENT_LINK = '#A0522D';
 
@@ -39,8 +40,11 @@ export function LoginScreen({ navigation }: Props) {
     setBusy(true);
     try {
       await signIn(email, password);
-    } catch (error: any) {
-      const msg = error.response?.data?.message || 'Login failed. Please try again.';
+    } catch (error: unknown) {
+      const msg = parseApiError(error, {
+        fallback: 'Login failed. Please try again.',
+        unauthorizedFallback: 'Incorrect email/phone or password. Please try again.',
+      });
       Alert.alert('Login Error', msg);
     } finally {
       setBusy(false);

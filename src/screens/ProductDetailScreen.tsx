@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -12,12 +12,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProductImage } from '../components/ProductImage';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { supermarketService } from '../services/supermarketService';
 import { productService } from '../services/productService';
 import { cartService } from '../services/cartService';
 import type { RootStackParamList } from '../navigation/navigationRef';
-import { colors, radii, shadows, spacing, typography } from '../theme';
+import { colors, radii, shadows, spacing } from '../theme';
+import { getProductImageUrl } from '../utils/catalogFormat';
+import { parseApiError } from '../utils/parseApiError';
 
 type R = RouteProp<RootStackParamList, 'ProductDetail'>;
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -101,7 +103,7 @@ export function ProductDetailScreen() {
       >
         <View style={styles.imgCard}>
           <ProductImage
-            uri={product.image}
+            uri={getProductImageUrl(product)}
             style={styles.heroImg}
             label={product.name}
           />
@@ -150,7 +152,7 @@ export function ProductDetailScreen() {
               }
             >
               <ProductImage
-                uri={p.image}
+                uri={getProductImageUrl(p)}
                 style={styles.relImg}
                 label={p.name}
               />
@@ -179,18 +181,14 @@ export function ProductDetailScreen() {
                 { text: 'Continue shopping', style: 'cancel', onPress: () => navigation.goBack() },
                 { text: 'View cart', onPress: () => navigation.navigate('Cart' as never) }
               ]);
-            } catch (error: any) {
-              let msg = 'Failed to add item to cart. Make sure you only add items from one supermarket.';
-              if (error.response?.data) {
-                if (typeof error.response.data.message === 'string') {
-                  msg = error.response.data.message;
-                } else if (Array.isArray(error.response.data.errors) && error.response.data.errors.length > 0) {
-                  msg = error.response.data.errors[0].msg || error.response.data.errors[0].message || msg;
-                } else if (typeof error.response.data === 'string' && error.response.data.length < 100) {
-                  msg = error.response.data;
-                }
-              }
-              Alert.alert('Error', msg);
+            } catch (error: unknown) {
+              Alert.alert(
+                'Unable to Add to Cart',
+                parseApiError(error, {
+                  fallback:
+                    'Failed to add item to cart. Make sure you only add items from one supermarket.',
+                }),
+              );
             } finally {
               setAdding(false);
             }

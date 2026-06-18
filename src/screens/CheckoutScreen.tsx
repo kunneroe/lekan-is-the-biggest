@@ -24,10 +24,17 @@ import { cartService } from '../services/cartService';
 import { supermarketService } from '../services/supermarketService';
 import { orderService } from '../services/orderService';
 import { paymentService } from '../services/paymentService';
+import { useAddresses } from '../context/AddressContext';
 import type { RootStackParamList } from '../navigation/navigationRef';
 import { colors, radii, shadows, spacing, typography } from '../theme';
-
-type R = RouteProp<RootStackParamList, 'Checkout'>;
+import {
+  getCartItemImageUrl,
+  getCartLineTotal,
+  mapPaymentMethodToBackend,
+  type ApiCartItem,
+} from '../utils/catalogFormat';
+import { formatAddressLabel, formatAddressLine } from '../utils/addressFormat';
+import { parseApiError } from '../utils/parseApiError';
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const PAYMENTS = [
@@ -41,11 +48,12 @@ export function CheckoutScreen() {
   const route = useRoute<R>();
   const navigation = useNavigation() as Nav;
   const { storeId } = route.params;
-  
-  const [savedAddresses] = useState([
-    { id: '1', label: 'Home', line: '123 Main St, Lagos' }
-  ]);
-  const [selectedAddressId] = useState('1');
+  const {
+    selectedAddress,
+    selectedAddressId,
+    refreshAddresses,
+    loading: addressesLoading,
+  } = useAddresses();
 
   const [cart, setCart] = useState<any>(null);
   const [store, setStore] = useState<any>(null);
@@ -73,14 +81,15 @@ export function CheckoutScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      void refreshAddresses();
       fetchCart();
-    }, [fetchCart])
+    }, [fetchCart, refreshAddresses]),
   );
 
-  const addr = savedAddresses.find((a) => a.id === selectedAddressId);
+  const addr = selectedAddress;
   const items = cart?.items || [];
 
-  if (loading) {
+  if (loading || addressesLoading) {
     return (
       <View style={styles.miss}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -88,11 +97,25 @@ export function CheckoutScreen() {
     );
   }
 
-  if (!store || items.length === 0 || !addr) {
+  if (!store || items.length === 0) {
     return (
       <View style={styles.miss}>
         <Text style={typography.body}>Nothing to checkout.</Text>
         <Pressable onPress={() => navigation.goBack()}>
+          <Text style={styles.link}>Go back</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  if (!addr || !selectedAddressId) {
+    return (
+      <View style={styles.miss}>
+        <Text style={typography.body}>Add a delivery address to continue.</Text>
+        <Pressable onPress={() => navigation.navigate('SavedAddresses')}>
+          <Text style={styles.link}>Add or select address</Text>
+        </Pressable>
+        <Pressable onPress={() => navigation.goBack()} style={{ marginTop: spacing.md }}>
           <Text style={styles.link}>Go back</Text>
         </Pressable>
       </View>
@@ -107,23 +130,17 @@ export function CheckoutScreen() {
   const handlePlaceOrder = async () => {
     if (placing) return;
     
-    if (!selectedAddressId || selectedAddressId === '1' || !addr) {
-      Alert.alert('Error', 'Please add and select a delivery address first.');
+    if (!selectedAddressId || !addr) {
+      Alert.alert('Delivery address required', 'Please add and select a delivery address first.');
       return;
     }
 
     setPlacing(true);
-    
-    const labelMap: Record<string, string> = {
-      card: 'CARD',
-      transfer: 'TRANSFER',
-      pod: 'CASH',
-    };
 
     try {
       const orderRes = await orderService.createOrder({
         addressId: addr.id,
-        paymentMethod: labelMap[payId] ?? 'CARD',
+        paymentMethod: mapPaymentMethodToBackend(payId),
         deliveryNote: note,
       });
       
@@ -132,8 +149,10 @@ export function CheckoutScreen() {
       
       if (!orderId) throw new Error('Order creation failed on backend.');
 
-      // Now call mock-confirm
-      await paymentService.mockConfirm(orderId);
+      // Only call mock-confirm for online payments, not pay-on-delivery
+      if (mapPaymentMethodToBackend(payId) !== 'PAY_ON_DELIVERY') {
+        await paymentService.mockConfirm(orderId);
+      }
 
       // Clear the local cart UI state via the API (or rely on backend auto-clear depending on architecture)
       try {
@@ -159,18 +178,13 @@ export function CheckoutScreen() {
           },
         ]
       );
-    } catch (error: any) {
-      let msg = 'Failed to place order. Please try again.';
-      if (error.response?.data) {
-        if (typeof error.response.data.message === 'string') {
-          msg = error.response.data.message;
-        } else if (Array.isArray(error.response.data.errors) && error.response.data.errors.length > 0) {
-          msg = error.response.data.errors[0].msg || error.response.data.errors[0].message || msg;
-        } else if (typeof error.response.data === 'string' && error.response.data.length < 100) {
-          msg = error.response.data;
-        }
-      }
-      Alert.alert('Checkout Error', msg);
+    } catch (error: unknown) {
+      Alert.alert(
+        'Checkout Error',
+        parseApiError(error, {
+          fallback: 'Failed to place order. Please try again.',
+        }),
+      );
     } finally {
       setPlacing(false);
     }
@@ -202,8 +216,8 @@ export function CheckoutScreen() {
             <Ionicons name="location" size={22} color={colors.primary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.addrTitle}>{addr.label}</Text>
-            <Text style={styles.addrLine}>{addr.line}</Text>
+            <Text style={styles.addrTitle}>{formatAddressLabel(addr)}</Text>
+            <Text style={styles.addrLine}>{formatAddressLine(addr)}</Text>
           </View>
         </View>
       </View>
@@ -246,10 +260,10 @@ export function CheckoutScreen() {
         </View>
       </View>
       <View style={styles.card}>
-        {items.map((l: any) => (
+        {items.map((l: ApiCartItem) => (
           <View key={l.id || l.product?.id} style={styles.itemRow}>
             <ProductImage
-              uri={l.product?.image}
+              uri={getCartItemImageUrl(l)}
               style={styles.thumb}
               label={l.product?.name}
             />
@@ -258,7 +272,7 @@ export function CheckoutScreen() {
               <Text style={styles.iqty}>Qty: {l.quantity}</Text>
             </View>
             <Text style={styles.iprice}>
-              ₦{(Number(l.product?.price || 0) * l.quantity).toLocaleString()}
+              ₦{getCartLineTotal(l).toLocaleString()}
             </Text>
           </View>
         ))}

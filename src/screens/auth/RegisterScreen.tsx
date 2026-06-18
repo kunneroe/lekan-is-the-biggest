@@ -14,6 +14,7 @@ import { AuthTextField } from '../../components/auth/AuthTextField';
 import { useAuth } from '../../context/AuthContext';
 import type { AuthStackParamList } from '../../navigation/AuthNavigator';
 import { colors, radii, spacing } from '../../theme';
+import { parseApiError } from '../../utils/parseApiError';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
@@ -41,8 +42,10 @@ export function RegisterScreen({ navigation }: Props) {
     setBusy(true);
     try {
       await register({ fullName: name, email, password, phone });
-    } catch (error: any) {
-      const msg = error.response?.data?.message || 'Registration failed. Please try again.';
+    } catch (error: unknown) {
+      const msg = parseApiError(error, {
+        fallback: 'Registration failed. Please try again.',
+      });
       Alert.alert('Registration Error', msg);
     } finally {
       setBusy(false);

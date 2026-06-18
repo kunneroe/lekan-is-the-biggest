@@ -16,6 +16,12 @@ import { navigateRoot } from '../navigation/navigationRef';
 import { cartService } from '../services/cartService';
 import { supermarketService } from '../services/supermarketService';
 import { colors, radii, shadows, spacing, typography } from '../theme';
+import {
+  getCartItemImageUrl,
+  getCartUnitPrice,
+  type ApiCartItem,
+} from '../utils/catalogFormat';
+import { parseApiError } from '../utils/parseApiError';
 
 export function CartScreen() {
   const insets = useSafeAreaInsets();
@@ -57,9 +63,13 @@ export function CartScreen() {
     try {
       await cartService.updateItemQuantity(itemId, qty);
       await fetchCart();
-    } catch (error: any) {
-      const msg = error.response?.data?.message || 'Failed to update quantity.';
-      Alert.alert('Error', msg);
+    } catch (error: unknown) {
+      Alert.alert(
+        'Unable to Update Cart',
+        parseApiError(error, {
+          fallback: 'Failed to update quantity. Please try again.',
+        }),
+      );
     } finally {
       setUpdating(false);
     }
@@ -71,9 +81,13 @@ export function CartScreen() {
     try {
       await cartService.removeItem(itemId);
       await fetchCart();
-    } catch (error: any) {
-      const msg = error.response?.data?.message || 'Failed to remove item.';
-      Alert.alert('Error', msg);
+    } catch (error: unknown) {
+      Alert.alert(
+        'Unable to Update Cart',
+        parseApiError(error, {
+          fallback: 'Failed to remove item. Please try again.',
+        }),
+      );
     } finally {
       setUpdating(false);
     }
@@ -134,10 +148,10 @@ export function CartScreen() {
             may vary.
           </Text>
         </View>
-        {items.map((l: any) => (
+        {items.map((l: ApiCartItem) => (
           <View key={l.id || l.product?.id} style={styles.line}>
             <ProductImage
-              uri={l.product?.image}
+              uri={getCartItemImageUrl(l)}
               style={styles.thumb}
               label={l.product?.name}
             />
@@ -145,7 +159,7 @@ export function CartScreen() {
               <Text style={styles.pname}>{l.product?.name}</Text>
               <Text style={styles.psub}>{l.product?.unit}</Text>
               <Text style={styles.pprice}>
-                ₦{Number(l.product?.price || 0).toLocaleString()} each
+                ₦{getCartUnitPrice(l).toLocaleString()} each
               </Text>
             </View>
             <View style={styles.step}>
@@ -154,15 +168,15 @@ export function CartScreen() {
                   l.quantity <= 1
                     ? Alert.alert('Remove item?', '', [
                         { text: 'Cancel', style: 'cancel' },
-                        { text: 'Remove', onPress: () => removeLine(l.id || l.product?.id) },
+                        { text: 'Remove', onPress: () => removeLine(l.id) },
                       ])
-                    : updateLineQty(l.id || l.product?.id, l.quantity - 1)
+                    : updateLineQty(l.id, l.quantity - 1)
                 }
               >
                 <Text style={styles.stepTxt}>−</Text>
               </Pressable>
               <Text style={styles.stepNum}>{l.quantity}</Text>
-              <Pressable onPress={() => updateLineQty(l.id || l.product?.id, l.quantity + 1)}>
+              <Pressable onPress={() => updateLineQty(l.id, l.quantity + 1)}>
                 <Text style={styles.stepTxt}>+</Text>
               </Pressable>
             </View>

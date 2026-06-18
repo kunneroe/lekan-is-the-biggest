@@ -1,13 +1,33 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { navigateRoot } from '../../navigation/navigationRef';
+import { orderService } from '../../services/orderService';
 import { colors, radii, spacing } from '../../theme';
 
 export function OrderHistoryScreen() {
   const insets = useSafeAreaInsets();
-  const orders: any[] = [];
-  const list = [...orders].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    orderService
+      .getOrders({ pastOnly: true })
+      .then((data) => setOrders(data.orders || data || []))
+      .catch(() => setOrders([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const list = [...orders].sort((a, b) => (a.placedAt || a.createdAt) < (b.placedAt || b.createdAt) ? 1 : -1);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <ScrollView

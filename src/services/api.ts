@@ -1,5 +1,6 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { parseApiError } from '../utils/parseApiError';
 
 // Set your backend base URL here using EXPO_PUBLIC_API_URL environment variable.
 // If not set, it defaults to localhost.
@@ -46,9 +47,11 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    const friendlyMessage = parseApiError(error);
+
     if (error.response) {
       const { status, data } = error.response;
-      console.error(`API Error [${status}]:`, data);
+      console.error(`API Error [${status}]:`, data, '→', friendlyMessage);
 
       if (status === 401) {
         // Handle unauthorized (e.g., token expired, invalid token)
@@ -63,9 +66,9 @@ api.interceptors.response.use(
         }
       }
     } else if (error.request) {
-      console.error('API Error: No response received', error.request);
+      console.error('API Error: Network unavailable →', friendlyMessage);
     } else {
-      console.error('API Error: Request setup failed', error.message);
+      console.error('API Error: Request setup failed →', friendlyMessage);
     }
 
     return Promise.reject(error);

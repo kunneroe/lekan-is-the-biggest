@@ -1,8 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MOCK_NOTIFICATIONS } from '../data/mockNotifications';
-import { colors, radii, spacing, typography } from '../theme';
+import { colors, spacing } from '../theme';
 
 export function NotificationsScreen() {
   const insets = useSafeAreaInsets();
@@ -15,24 +14,13 @@ export function NotificationsScreen() {
       ]}
       showsVerticalScrollIndicator={false}
     >
-      {MOCK_NOTIFICATIONS.map((n) => (
-        <Pressable
-          key={n.id}
-          style={[styles.row, !n.read && styles.unread]}
-          onPress={() =>
-            Alert.alert(n.title, n.body, [{ text: 'OK' }])
-          }
-        >
-          <View style={styles.icon}>
-            <Ionicons name="notifications" size={22} color={colors.primary} />
-          </View>
-          <View style={styles.textCol}>
-            <Text style={styles.title}>{n.title}</Text>
-            <Text style={styles.body}>{n.body}</Text>
-            <Text style={styles.time}>{n.time}</Text>
-          </View>
-        </Pressable>
-      ))}
+      <View style={styles.empty}>
+        <Ionicons name="notifications-off-outline" size={56} color={colors.textMuted} />
+        <Text style={styles.emptyTitle}>No notifications yet</Text>
+        <Text style={styles.emptySub}>
+          You're all caught up! Check back here for order updates and offers.
+        </Text>
+      </View>
     </ScrollView>
   );
 }
@@ -40,42 +28,27 @@ export function NotificationsScreen() {
 const styles = StyleSheet.create({
   scroll: {
     padding: spacing.xl,
+    flexGrow: 1,
   },
-  row: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    backgroundColor: colors.surface,
-    padding: spacing.lg,
-    borderRadius: radii.lg,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  unread: {
-    borderColor: colors.primary,
-    backgroundColor: colors.mint,
-  },
-  icon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.surface,
+  empty: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 80,
+    paddingHorizontal: spacing.xl,
   },
-  textCol: { flex: 1 },
-  title: {
+  emptyTitle: {
     fontWeight: '700',
+    fontSize: 18,
     color: colors.text,
-    marginBottom: 4,
+    marginTop: spacing.lg,
+    textAlign: 'center',
   },
-  body: {
-    ...typography.body,
+  emptySub: {
     color: colors.textSecondary,
-    marginBottom: spacing.sm,
-  },
-  time: {
-    fontSize: 12,
-    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    lineHeight: 22,
   },
 });
+

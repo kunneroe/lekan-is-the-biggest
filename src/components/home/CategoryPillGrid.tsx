@@ -1,22 +1,37 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { CATEGORY_ITEMS } from '../../data/supermarkets';
 import { colors, radii, spacing, typography } from '../../theme';
 
-const ROWS = [
-  CATEGORY_ITEMS.slice(0, 4),
-  CATEGORY_ITEMS.slice(4, 8),
-] as const;
+export type CategoryGridItem = {
+  id: string;
+  name: string;
+  icon: keyof typeof Ionicons.glyphMap;
+};
 
 type Props = {
+  categories: CategoryGridItem[];
   selectedId?: string | null;
   onSelect?: (categoryId: string) => void;
 };
 
-export function CategoryPillGrid({ selectedId, onSelect }: Props) {
+function chunk<T>(items: T[], size: number): T[][] {
+  const rows: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    rows.push(items.slice(i, i + size));
+  }
+  return rows;
+}
+
+export function CategoryPillGrid({ categories, selectedId, onSelect }: Props) {
+  const rows = chunk(categories.slice(0, 8), 4);
+
+  if (categories.length === 0) {
+    return null;
+  }
+
   return (
     <View style={styles.wrap}>
-      {ROWS.map((row, idx) => (
+      {rows.map((row, idx) => (
         <View key={idx} style={styles.row}>
           {row.map((cat) => {
             const on = selectedId === cat.id;
@@ -37,7 +52,7 @@ export function CategoryPillGrid({ selectedId, onSelect }: Props) {
                   style={[styles.label, typography.categoryLabel, on && styles.labelOn]}
                   numberOfLines={1}
                 >
-                  {cat.label}
+                  {cat.name}
                 </Text>
               </Pressable>
             );

@@ -5,8 +5,10 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProductImage } from '../components/ProductImage';
 import { trackingService } from '../services/trackingService';
+import { orderService } from '../services/orderService';
 import type { RootStackParamList } from '../navigation/navigationRef';
 import { colors, radii, spacing, typography } from '../theme';
+import { parseApiError } from '../utils/parseApiError';
 
 type R = RouteProp<RootStackParamList, 'TrackOrder'>;
 
@@ -17,18 +19,37 @@ export function TrackOrderScreen() {
   const { orderId } = route.params;
 
   const [trackingData, setTrackingData] = useState<any>(null);
+  const [orderData, setOrderData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  const STATUS_TO_STEP: Record<string, number> = {
+    CONFIRMED: 0,
+    PREPARING: 1,
+    RIDER_ASSIGNED: 2,
+    PICKED_UP: 3,
+    ON_THE_WAY: 4,
+    DELIVERED: 5,
+  };
 
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
 
     const fetchTracking = async (isPoll = false) => {
       try {
-        const data = await trackingService.getTrackingUpdate(orderId);
-        setTrackingData(data.tracking || data || null);
-      } catch (error: any) {
+        const [trackRes, orderRes] = await Promise.all([
+          trackingService.getTrackingUpdate(orderId),
+          orderService.getOrderById(orderId),
+        ]);
+        setTrackingData(trackRes.tracking || trackRes || null);
+        setOrderData(orderRes.order || orderRes || null);
+      } catch (error: unknown) {
         if (!isPoll) {
-          Alert.alert('Error', error.response?.data?.message || 'Failed to load tracking data.');
+          Alert.alert(
+            'Unable to Load Tracking',
+            parseApiError(error, {
+              fallback: 'Failed to load tracking data. Please try again.',
+            }),
+          );
         }
       } finally {
         if (!isPoll) {
@@ -67,27 +88,42 @@ export function TrackOrderScreen() {
     );
   }
 
-  // Extract from backend payload, falling back to safe defaults
-  const order = trackingData.order || trackingData;
-  const step = trackingData.stepIndex || order.stepIndex || 0;
-  
-  // Example steps, ideally backend provides this
-  const trackingSteps = trackingData.trackingSteps || [
+  // Derive stepIndex from backend status string
+  const status = trackingData.status || orderData?.status || '';
+  const step = STATUS_TO_STEP[status] ?? 0;
+
+  const trackingSteps = [
     'Order placed',
     'Store accepted order',
+    'Rider assigned',
     'Rider at store',
     'Heading to you',
-    'Arrived',
+    'Delivered',
   ];
-  
+
   const progress = Math.min((step + 1) / trackingSteps.length, 1);
-  const rider = trackingData.rider || order.rider || { name: 'Assigning rider...', vehicle: 'N/A', plate: 'N/A' };
-  const lines = order.lines || order.items || [];
-  const etaMins = trackingData.etaMins || order.etaMins || 15;
-  const total = order.total || 0;
-  const addressLabel = order.addressLabel || 'YOUR ADDRESS';
-  const addressLine = order.addressLine || '';
-  const deliveryNote = order.deliveryNote || 'No note provided';
+
+  // Rider info — backend uses rider.fullName, rider.vehicleType, rider.vehiclePlate
+  const riderRaw = trackingData.rider || orderData?.rider || null;
+  const riderName = riderRaw?.fullName || 'Assigning rider...';
+  const riderVehicle = riderRaw?.vehicleType || 'N/A';
+  const riderPlate = riderRaw?.vehiclePlate || 'N/A';
+
+  // Items from order details fetch
+  const lines = orderData?.items || orderData?.lines || [];
+
+  // ETA — display the string as-is from backend
+  const eta = trackingData.eta || 'Calculating...';
+
+  // Total from order details
+  const total = orderData?.totalAmount ?? orderData?.total ?? 0;
+
+  // Address from tracking payload
+  const deliveryAddress = trackingData.deliveryAddress || orderData?.deliveryAddress || null;
+  const addressLabel = deliveryAddress?.label || 'YOUR ADDRESS';
+  const addressLine = deliveryAddress?.line1 || '';
+
+  const deliveryNote = orderData?.deliveryNote || trackingData.deliveryNote || 'No note provided';
 
   return (
     <ScrollView
@@ -98,15 +134,15 @@ export function TrackOrderScreen() {
         <Text style={styles.mapLabel}>Map preview</Text>
         <Ionicons name="map" size={64} color={colors.mintStrong} />
         <Text style={styles.mapSub}>Live maps are simulated. Polling backend every 10s.</Text>
-        {trackingData.riderLocation && (
+        {trackingData.latestLocation && (
           <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, marginTop: 4 }}>
-            Rider GPS: {trackingData.riderLocation.lat}, {trackingData.riderLocation.lng}
+            Rider GPS: {trackingData.latestLocation.latitude}, {trackingData.latestLocation.longitude}
           </Text>
         )}
       </View>
       <View style={styles.sheet}>
         <View style={styles.row1}>
-          <Text style={styles.eta}>Arriving in ~{etaMins} mins</Text>
+          <Text style={styles.eta}>Arriving in {eta}</Text>
           <Text style={styles.price}>₦{Number(total || 0).toLocaleString()}</Text>
         </View>
         <View style={styles.barBg}>
@@ -121,8 +157,8 @@ export function TrackOrderScreen() {
               {trackingSteps[Math.min(step, trackingSteps.length - 1)]}
             </Text>
             <Text style={styles.stSub}>
-              {rider.name !== 'Assigning rider...' 
-                ? `${rider.name} is handling your order` 
+              {riderName !== 'Assigning rider...'
+                ? `${riderName} is handling your order`
                 : 'Waiting for rider assignment...'}
             </Text>
           </View>
@@ -133,9 +169,9 @@ export function TrackOrderScreen() {
             <Ionicons name="person" size={28} color={colors.textSecondary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.riderName}>{rider.name}</Text>
+            <Text style={styles.riderName}>{riderName}</Text>
             <Text style={styles.riderV}>
-              {rider.vehicle} · {rider.plate}
+              {riderVehicle} · {riderPlate}
             </Text>
           </View>
           <Pressable style={styles.iconBtn}>
@@ -164,7 +200,7 @@ export function TrackOrderScreen() {
           {lines.slice(0, 4).map((l: any) => (
             <ProductImage
               key={l.id || l.product?.id || Math.random()}
-              uri={l.product?.image}
+              uri={l.productImageUrl || l.product?.imageUrl || l.product?.image || null}
               style={styles.mini}
               label={l.product?.name || 'Item'}
             />

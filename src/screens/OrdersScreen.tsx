@@ -15,6 +15,7 @@ import { ProductImage } from '../components/ProductImage';
 import { orderService } from '../services/orderService';
 import { navigateRoot } from '../navigation/navigationRef';
 import { colors, radii, shadows, spacing, typography } from '../theme';
+import { parseApiError } from '../utils/parseApiError';
 
 export function OrdersScreen() {
   const insets = useSafeAreaInsets();
@@ -23,31 +24,35 @@ export function OrdersScreen() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const ACTIVE_STATUSES = ['CONFIRMED', 'PREPARING', 'RIDER_ASSIGNED', 'PICKED_UP', 'ON_THE_WAY'];
+  const PAST_STATUSES = ['DELIVERED', 'CANCELLED'];
+
   useFocusEffect(
     useCallback(() => {
       const fetchOrders = async () => {
         try {
-          const data = await orderService.getOrders();
+          const param = tab === 'active' ? { activeOnly: true } : { pastOnly: true };
+          const data = await orderService.getOrders(param);
           setOrders(data.orders || data || []);
-        } catch (error: any) {
-          Alert.alert('Error', error.response?.data?.message || 'Failed to load order history.');
+        } catch (error: unknown) {
+          Alert.alert(
+            'Unable to Load Orders',
+            parseApiError(error, {
+              fallback: 'Failed to load order history. Please try again.',
+            }),
+          );
         } finally {
           setLoading(false);
         }
       };
-      
+
       setLoading(true);
       fetchOrders();
-    }, [])
+    }, [tab])
   );
 
-  const isActiveStatus = (status: string) => {
-    const s = (status || '').toLowerCase();
-    return ['active', 'pending', 'processing', 'on_the_way', 'out_for_delivery', 'accepted'].includes(s);
-  };
-
-  const active = orders.filter((o) => isActiveStatus(o.status));
-  const past = orders.filter((o) => !isActiveStatus(o.status));
+  const active = orders.filter((o) => ACTIVE_STATUSES.includes(o.status));
+  const past = orders.filter((o) => PAST_STATUSES.includes(o.status));
 
   return (
     <View style={styles.screen}>
@@ -156,14 +161,22 @@ function ImageAvatar() {
 }
 
 function ActiveCard({ order }: { order: any }) {
-  // If the backend provides lines, use them, otherwise fallback to empty array
   const lines = order.lines || order.items || [];
-  const firstImage = lines[0]?.product?.image || lines[0]?.image || 'https://via.placeholder.com/100';
+  const firstImage =
+    lines[0]?.productImageUrl ||
+    lines[0]?.product?.imageUrl ||
+    lines[0]?.product?.image ||
+    lines[0]?.image ||
+    null;
   const storeName = order.storeName || order.supermarket?.name || 'Supermarket';
-  
-  const stepIndex = order.stepIndex || 0;
-  const badge = stepIndex >= 4 ? 'ON THE WAY' : 'PROCESSING';
-  const badgeStyle = stepIndex >= 4 ? styles.badgeGreen : styles.badgeOrange;
+
+  const status = order.status || '';
+  const isOnTheWay = status === 'ON_THE_WAY' || status === 'PICKED_UP';
+  const badge = isOnTheWay ? 'ON THE WAY' : 'PROCESSING';
+  const badgeStyle = isOnTheWay ? styles.badgeGreen : styles.badgeOrange;
+
+  const displayTotal = Number(order.totalAmount ?? order.total ?? 0);
+  const displayDate = order.placedAt || order.createdAt;
 
   return (
     <View style={styles.card}>
@@ -175,13 +188,13 @@ function ActiveCard({ order }: { order: any }) {
         />
         <View style={{ flex: 1 }}>
           <Text style={styles.storeName}>{storeName}</Text>
-          <Text style={styles.time}>{new Date(order.createdAt).toLocaleDateString()}</Text>
+          <Text style={styles.time}>{new Date(displayDate).toLocaleDateString()}</Text>
         </View>
         <View style={[styles.badge, badgeStyle]}>
           <Text
             style={[
               styles.badgeTxt,
-              stepIndex >= 4 ? styles.badgeTxtDark : styles.badgeTxtOrange,
+              isOnTheWay ? styles.badgeTxtDark : styles.badgeTxtOrange,
             ]}
           >
             {badge}
@@ -192,7 +205,7 @@ function ActiveCard({ order }: { order: any }) {
       <View style={styles.mid}>
         <View>
           <Text style={styles.ot}>Order total</Text>
-          <Text style={styles.op}>₦{Number(order.total || 0).toLocaleString()}</Text>
+          <Text style={styles.op}>₦{displayTotal.toLocaleString()}</Text>
         </View>
         <Text style={styles.items}>{lines.length} items</Text>
       </View>
@@ -217,6 +230,8 @@ function ActiveCard({ order }: { order: any }) {
 
 function PastRow({ order }: { order: any }) {
   const storeName = order.storeName || order.supermarket?.name || 'Supermarket';
+  const displayTotal = Number(order.totalAmount ?? order.total ?? 0);
+  const displayDate = order.placedAt || order.createdAt;
 
   return (
     <View style={styles.pastRow}>
@@ -225,9 +240,9 @@ function PastRow({ order }: { order: any }) {
       </View>
       <View style={{ flex: 1 }}>
         <Text style={styles.pastStore}>{storeName}</Text>
-        <Text style={styles.pastDate}>{new Date(order.createdAt).toLocaleDateString()}</Text>
+        <Text style={styles.pastDate}>{new Date(displayDate).toLocaleDateString()}</Text>
       </View>
-      <Text style={styles.pastPrice}>₦{Number(order.total || 0).toLocaleString()}</Text>
+      <Text style={styles.pastPrice}>₦{displayTotal.toLocaleString()}</Text>
       <Pressable
         style={styles.reorder}
         onPress={() => {

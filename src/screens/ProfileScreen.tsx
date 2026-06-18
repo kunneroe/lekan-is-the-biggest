@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import {
   Alert,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -114,12 +113,16 @@ export function ProfileScreen() {
               <View style={styles.dot} />
             </View>
           </Pressable>
-          <Image source={{ uri: user?.avatar || 'https://via.placeholder.com/100' }} style={styles.avatarSm} />
+          <View style={styles.avatarSm}>
+            <Ionicons name="person" size={16} color={colors.textSecondary} />
+          </View>
         </View>
       </View>
       <View style={styles.card}>
         <View style={styles.avatarWrap}>
-          <Image source={{ uri: user?.avatar || 'https://via.placeholder.com/100' }} style={styles.avatar} />
+          <View style={styles.avatar}>
+            <Ionicons name="person" size={40} color={colors.textSecondary} />
+          </View>
           <Pressable
             style={styles.edit}
             onPress={() => Alert.alert('Edit profile', 'Mock profile editor.')}
@@ -127,8 +130,9 @@ export function ProfileScreen() {
             <Ionicons name="pencil" size={14} color={colors.surface} />
           </Pressable>
         </View>
-        <Text style={styles.name}>{user?.FullName || user?.name || 'User'}</Text>
-        <Text style={styles.phone}>{user?.phone || 'No phone'}</Text>
+        <Text style={styles.name}>{user?.fullName || 'User'}</Text>
+        <Text style={styles.phone}>{user?.email || ''}</Text>
+        <Text style={styles.phone}>{user?.phone || ''}</Text>
       </View>
       <Text style={styles.sec}>Account settings</Text>
       <View style={styles.menuCard}>
@@ -209,7 +213,14 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: colors.bannerOrange,
   },
-  avatarSm: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.border },
+  avatarSm: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   card: {
     margin: spacing.xl,
     backgroundColor: colors.surface,
@@ -224,6 +235,8 @@ const styles = StyleSheet.create({
     height: 96,
     borderRadius: 48,
     backgroundColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   edit: {
     position: 'absolute',

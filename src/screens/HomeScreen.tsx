@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -9,6 +9,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CategoryPillGrid } from '../components/home/CategoryPillGrid';
 import { HomeHeader } from '../components/home/HomeHeader';
@@ -16,48 +17,94 @@ import { HomeSearchBar } from '../components/home/HomeSearchBar';
 import { PromoBannerCarousel } from '../components/home/PromoBannerCarousel';
 import { SectionHeader } from '../components/home/SectionHeader';
 import { SupermarketListCard } from '../components/home/SupermarketListCard';
-
+import { useAddresses } from '../context/AddressContext';
+import { categoryService } from '../services/categoryService';
 import { supermarketService } from '../services/supermarketService';
 import { navigateRoot } from '../navigation/navigationRef';
 import { colors, radii, spacing } from '../theme';
+import {
+  formatAddressLabel,
+  formatAddressLine,
+  formatAddressShortLine,
+} from '../utils/addressFormat';
+import { toCategoryGridItems, type ApiCategory } from '../utils/catalogFormat';
+import { parseApiError } from '../utils/parseApiError';
 
 const TAB_BAR_EXTRA = 64;
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const [savedAddresses] = useState([
-    { id: '1', label: 'Home', line: '123 Main St, Lagos' }
-  ]);
-  const [selectedAddressId, setSelectedAddressId] = useState('1');
-  
+  const {
+    addresses,
+    selectedAddressId,
+    setSelectedAddressId,
+    refreshAddresses,
+    selectAddressAsDefault,
+    loading: addressesLoading,
+  } = useAddresses();
+
   const [addrOpen, setAddrOpen] = useState(false);
   const [homeCategory, setHomeCategory] = useState<string | null>(null);
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [supermarkets, setSupermarkets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  useFocusEffect(
+    useCallback(() => {
+      void refreshAddresses();
+    }, [refreshAddresses]),
+  );
+
   useEffect(() => {
-    const fetchSupermarkets = async () => {
+    const fetchHomeData = async () => {
       try {
-        const data = await supermarketService.getSupermarkets();
-        setSupermarkets(data.supermarkets || data || []);
-      } catch (error: any) {
-        const msg = error.response?.data?.message || 'Failed to load supermarkets.';
-        Alert.alert('Error', msg);
+        const [storeData, categoryList] = await Promise.all([
+          supermarketService.getSupermarkets(),
+          categoryService.getCategories(),
+        ]);
+        setSupermarkets(storeData.supermarkets || storeData || []);
+        setCategories(categoryList);
+      } catch (error: unknown) {
+        const msg = parseApiError(error, {
+          fallback: 'Failed to load supermarkets. Please try again.',
+        });
+        Alert.alert('Unable to Load Stores', msg);
       } finally {
         setLoading(false);
       }
     };
-    fetchSupermarkets();
+    fetchHomeData();
   }, []);
 
-  const addr = savedAddresses.find((a) => a.id === selectedAddressId);
-  const deliveryLine = addr
-    ? `${addr.label}, ${addr.line.split(',').slice(0, 1).join('').trim()}`
-    : 'Select address';
+  const selectedAddress = addresses.find((a) => a.id === selectedAddressId);
+  const deliveryLine = selectedAddress
+    ? formatAddressShortLine(selectedAddress)
+    : addressesLoading
+      ? 'Loading address…'
+      : 'Add a delivery address';
 
   const openStore = (storeId?: string, categoryId?: string) => {
     if (storeId) {
       navigateRoot('Store', { storeId, categoryId });
+    }
+  };
+
+  const handleSelectAddress = async (id: string) => {
+    setSelectedAddressId(id);
+    setAddrOpen(false);
+    try {
+      await selectAddressAsDefault(id);
+      const address = addresses.find((a) => a.id === id);
+      if (address) {
+        Alert.alert('Updated', `Delivering to ${formatAddressLabel(address)}`);
+      }
+    } catch (error: unknown) {
+      Alert.alert(
+        'Unable to Update Address',
+        parseApiError(error, {
+          fallback: 'Could not set your default delivery address.',
+        }),
+      );
     }
   };
 
@@ -97,6 +144,7 @@ export function HomeScreen() {
           }
         />
         <CategoryPillGrid
+          categories={toCategoryGridItems(categories)}
           selectedId={homeCategory}
           onSelect={(id) => {
             setHomeCategory(id);
@@ -105,7 +153,7 @@ export function HomeScreen() {
         />
         <View style={styles.sectionSpacer} />
         <SectionHeader title="Supermarkets Near You" />
-        
+
         {loading ? (
           <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: spacing.xl }} />
         ) : (
@@ -118,7 +166,7 @@ export function HomeScreen() {
           ))
         )}
       </ScrollView>
-      
+
       <Modal visible={addrOpen} transparent animationType="fade">
         <View style={styles.modalWrap}>
           <Pressable
@@ -127,23 +175,36 @@ export function HomeScreen() {
           />
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Delivery address</Text>
-            {savedAddresses.map((a) => (
-              <Pressable
-                key={a.id}
-                style={[
-                  styles.modalRow,
-                  selectedAddressId === a.id && styles.modalRowOn,
-                ]}
-                onPress={() => {
-                  setSelectedAddressId(a.id);
-                  setAddrOpen(false);
-                  Alert.alert('Updated', `Delivering to ${a.label}`);
-                }}
-              >
-                <Text style={styles.modalLab}>{a.label}</Text>
-                <Text style={styles.modalLine}>{a.line}</Text>
-              </Pressable>
-            ))}
+            {addressesLoading ? (
+              <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: spacing.lg }} />
+            ) : addresses.length === 0 ? (
+              <View style={styles.emptyWrap}>
+                <Text style={styles.emptyText}>No saved addresses yet.</Text>
+                <Pressable
+                  style={styles.addBtn}
+                  onPress={() => {
+                    setAddrOpen(false);
+                    navigateRoot('SavedAddresses');
+                  }}
+                >
+                  <Text style={styles.addBtnTxt}>Add an address</Text>
+                </Pressable>
+              </View>
+            ) : (
+              addresses.map((a) => (
+                <Pressable
+                  key={a.id}
+                  style={[
+                    styles.modalRow,
+                    selectedAddressId === a.id && styles.modalRowOn,
+                  ]}
+                  onPress={() => void handleSelectAddress(a.id)}
+                >
+                  <Text style={styles.modalLab}>{formatAddressLabel(a)}</Text>
+                  <Text style={styles.modalLine}>{formatAddressLine(a)}</Text>
+                </Pressable>
+              ))
+            )}
             <Pressable onPress={() => setAddrOpen(false)}>
               <Text style={styles.modalClose}>Close</Text>
             </Pressable>
@@ -204,6 +265,25 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.lg,
     color: colors.primary,
+    fontWeight: '700',
+  },
+  emptyWrap: {
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+    gap: spacing.md,
+  },
+  emptyText: {
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  addBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: radii.md,
+  },
+  addBtnTxt: {
+    color: colors.surface,
     fontWeight: '700',
   },
 });

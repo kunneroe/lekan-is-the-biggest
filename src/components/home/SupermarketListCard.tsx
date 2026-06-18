@@ -1,17 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import type { Supermarket } from '../../data/supermarkets';
+import {
+  getSupermarketEta,
+  getSupermarketImageUrl,
+  type ApiSupermarket,
+} from '../../utils/catalogFormat';
 import { colors, radii, shadows, spacing, typography } from '../../theme';
 
 type Props = {
-  store: Supermarket;
+  store: ApiSupermarket;
   onPress?: () => void;
 };
 
 export function SupermarketListCard({ store, onPress }: Props) {
-  const eta = `${store.etaMin} - ${store.etaMax} mins`;
+  const { min, max } = getSupermarketEta(store);
+  const eta = `${min} - ${max} mins`;
   const fee = `₦${Number(store.deliveryFee || 0).toLocaleString()} delivery`;
+  const imageUrl = getSupermarketImageUrl(store);
   const [imgErr, setImgErr] = useState(false);
   const fallback = 'https://placehold.co/150x150/png?text=No+Image';
 
@@ -19,9 +25,9 @@ export function SupermarketListCard({ store, onPress }: Props) {
     <Pressable onPress={onPress} style={({ pressed }) => [pressed && { opacity: 0.92 }]}>
       <View style={styles.card}>
         <View style={styles.imageWrap}>
-          <Image 
-            source={{ uri: imgErr || !store.image ? fallback : store.image }} 
-            style={styles.image} 
+          <Image
+            source={{ uri: imgErr || !imageUrl ? fallback : imageUrl }}
+            style={styles.image}
             onError={() => setImgErr(true)}
           />
           <View style={styles.ratingBadge}>
@@ -37,7 +43,7 @@ export function SupermarketListCard({ store, onPress }: Props) {
             <Text style={styles.open}>OPEN</Text>
           </View>
           <Text style={[styles.meta, typography.meta]}>
-            {store.area} • {eta}
+            {store.area || store.city || 'Nearby'} • {eta}
           </Text>
           <View style={styles.feeRow}>
             <Ionicons name="bicycle-outline" size={16} color={colors.primary} />

@@ -1,13 +1,9 @@
 import api from './api';
+import { parseCategoriesResponse, type ApiCategory } from '../utils/catalogFormat';
 
 export const categoryService = {
-  getCategories: async () => {
+  getCategories: async (): Promise<ApiCategory[]> => {
     const response = await api.get('/categories');
-    return response.data;
-  },
-  
-  getCategoryById: async (id: string) => {
-    const response = await api.get(`/categories/${id}`);
-    return response.data;
+    return parseCategoriesResponse(response.data);
   },
 };

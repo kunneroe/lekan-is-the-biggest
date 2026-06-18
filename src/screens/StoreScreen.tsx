@@ -16,13 +16,22 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProductImage } from '../components/ProductImage';
-import { getCategoryLabel, type Product } from '../data/products';
-import { CATEGORY_ITEMS } from '../data/supermarkets';
 import type { RootStackParamList } from '../navigation/navigationRef';
+import { categoryService } from '../services/categoryService';
 import { supermarketService } from '../services/supermarketService';
 import { productService } from '../services/productService';
 import { cartService } from '../services/cartService';
-import { colors, radii, shadows, spacing, typography } from '../theme';
+import { colors, radii, shadows, spacing } from '../theme';
+import {
+  getProductCategoryName,
+  getProductImageUrl,
+  getSupermarketEta,
+  getSupermarketImageUrl,
+  toCategoryGridItems,
+  type ApiCategory,
+  type ApiProduct,
+} from '../utils/catalogFormat';
+import { parseApiError } from '../utils/parseApiError';
 
 type R = RouteProp<RootStackParamList, 'Store'>;
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -34,8 +43,10 @@ export function StoreScreen() {
   const { storeId, categoryId: routeCategory } = route.params;
   
   const [store, setStore] = useState<any>(null);
-  const [allProducts, setAllProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
+  const [allProducts, setAllProducts] = useState<ApiProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const [productsLoading, setProductsLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [categoryId, setCategoryId] = useState<string | null>(routeCategory ?? null);
   const [heroErr, setHeroErr] = useState(false);
@@ -46,38 +57,61 @@ export function StoreScreen() {
   }, [storeId, routeCategory]);
 
   useEffect(() => {
-    const loadStoreData = async () => {
+    const loadStoreMeta = async () => {
       try {
         setLoading(true);
-        const storeData = await supermarketService.getSupermarketById(storeId);
+        const [storeData, categoryList] = await Promise.all([
+          supermarketService.getSupermarketById(storeId),
+          categoryService.getCategories(),
+        ]);
         setStore(storeData.supermarket || storeData);
-        
-        const productsData = await productService.getProductsBySupermarket(storeId);
-        setAllProducts(productsData.products || productsData || []);
-      } catch (error: any) {
-        Alert.alert('Error', error.response?.data?.message || 'Failed to load store details.');
+        setCategories(categoryList);
+      } catch (error: unknown) {
+        Alert.alert(
+          'Unable to Load Store',
+          parseApiError(error, {
+            fallback: 'Failed to load store details. Please try again.',
+          }),
+        );
       } finally {
         setLoading(false);
       }
     };
-    loadStoreData();
+    loadStoreMeta();
   }, [storeId]);
 
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setProductsLoading(true);
+        const params = categoryId ? { categoryId } : undefined;
+        const productsData = await productService.getProductsBySupermarket(storeId, params);
+        setAllProducts(productsData.products || productsData || []);
+      } catch (error: unknown) {
+        Alert.alert(
+          'Unable to Load Products',
+          parseApiError(error, {
+            fallback: 'Failed to load products. Please try again.',
+          }),
+        );
+      } finally {
+        setProductsLoading(false);
+      }
+    };
+    if (!loading) {
+      loadProducts();
+    }
+  }, [storeId, categoryId, loading]);
+
   const filtered = useMemo(() => {
-    let list = allProducts;
-    if (categoryId) {
-      list = list.filter((p) => p.categoryId === categoryId);
-    }
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      list = list.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          getCategoryLabel(p.categoryId).toLowerCase().includes(q),
-      );
-    }
-    return list;
-  }, [allProducts, categoryId, search]);
+    if (!search.trim()) return allProducts;
+    const q = search.trim().toLowerCase();
+    return allProducts.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        getProductCategoryName(p).toLowerCase().includes(q),
+    );
+  }, [allProducts, search]);
 
   const handleAddToCart = async (productId: string) => {
     if (addingId) return;
@@ -85,18 +119,14 @@ export function StoreScreen() {
     try {
       await cartService.addItem(productId, 1);
       Alert.alert('Success', 'Item added to cart.');
-    } catch (error: any) {
-      let msg = 'Failed to add item to cart. Make sure you only add items from one supermarket.';
-      if (error.response?.data) {
-        if (typeof error.response.data.message === 'string') {
-          msg = error.response.data.message;
-        } else if (Array.isArray(error.response.data.errors) && error.response.data.errors.length > 0) {
-          msg = error.response.data.errors[0].msg || error.response.data.errors[0].message || msg;
-        } else if (typeof error.response.data === 'string' && error.response.data.length < 100) {
-          msg = error.response.data;
-        }
-      }
-      Alert.alert('Cart Error', msg);
+    } catch (error: unknown) {
+      Alert.alert(
+        'Cart Error',
+        parseApiError(error, {
+          fallback:
+            'Failed to add item to cart. Make sure you only add items from one supermarket.',
+        }),
+      );
     } finally {
       setAddingId(null);
     }
@@ -122,8 +152,11 @@ export function StoreScreen() {
     );
   }
 
-  const eta = `${store.etaMin || 15}–${store.etaMax || 30} mins`;
+  const { min, max } = getSupermarketEta(store);
+  const eta = `${min}–${max} mins`;
   const deliveryFee = store.deliveryFee !== undefined ? store.deliveryFee : 500;
+  const heroImage = getSupermarketImageUrl(store);
+  const categoryChips = toCategoryGridItems(categories);
 
   return (
     <View style={styles.screen}>
@@ -142,7 +175,7 @@ export function StoreScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
       >
         <ImageBackground
-          source={{ uri: heroErr || !store.image ? 'https://placehold.co/400x200/png?text=No+Image' : store.image }}
+          source={{ uri: heroErr || !heroImage ? 'https://placehold.co/400x200/png?text=No+Image' : heroImage }}
           style={styles.hero}
           imageStyle={styles.heroImg}
           onError={() => setHeroErr(true)}
@@ -177,21 +210,23 @@ export function StoreScreen() {
             >
               <Text style={[styles.chipTxt, !categoryId && styles.chipTxtOn]}>All</Text>
             </Pressable>
-            {CATEGORY_ITEMS.map((c) => (
+            {categoryChips.map((c) => (
               <Pressable
                 key={c.id}
                 style={[styles.chip, categoryId === c.id && styles.chipOn]}
                 onPress={() => setCategoryId(categoryId === c.id ? null : c.id)}
               >
                 <Text style={[styles.chipTxt, categoryId === c.id && styles.chipTxtOn]}>
-                  {c.label}
+                  {c.name}
                 </Text>
               </Pressable>
             ))}
           </ScrollView>
           <View style={styles.secHead}>
             <Text style={styles.secTitle}>Products</Text>
-            <Text style={styles.secSub}>{filtered.length} items</Text>
+            <Text style={styles.secSub}>
+              {productsLoading ? 'Loading…' : `${filtered.length} items`}
+            </Text>
           </View>
           <View style={styles.grid}>
             {filtered.map((p) => (
@@ -216,7 +251,7 @@ function ProductCard({
   onOpen,
   onAdd,
 }: {
-  product: Product;
+  product: ApiProduct;
   isAdding?: boolean;
   onOpen: () => void;
   onAdd: () => void;
@@ -226,7 +261,7 @@ function ProductCard({
       <View style={styles.cardImgWrap}>
         <Pressable onPress={onOpen}>
           <ProductImage
-            uri={product.image}
+            uri={getProductImageUrl(product)}
             style={styles.cardImg}
             label={product.name}
           />
@@ -243,7 +278,7 @@ function ProductCard({
         <Text numberOfLines={2} style={styles.pName}>
           {product.name}
         </Text>
-        <Text style={styles.pCat}>{getCategoryLabel(product.categoryId)}</Text>
+        <Text style={styles.pCat}>{getProductCategoryName(product)}</Text>
         <Text style={styles.pPrice}>₦{Number(product.price || 0).toLocaleString()}</Text>
       </Pressable>
     </View>
