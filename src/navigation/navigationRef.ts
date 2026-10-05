@@ -18,6 +18,7 @@ export type RootStackParamList = {
   OrderHistory: undefined;
   HelpSupport: undefined;
   Settings: undefined;
+  AllSupermarkets: undefined;
 };
 
 export const navigationRef =

@@ -40,13 +40,20 @@ export function SupermarketListCard({ store, onPress }: Props) {
             <Text style={[styles.name, typography.storeName]} numberOfLines={2}>
               {store.name}
             </Text>
-            <Text style={styles.open}>OPEN</Text>
+            <Text
+              style={[
+                styles.open,
+                (store.status === 'INACTIVE' || store.status === 'CLOSED') && styles.closed,
+              ]}
+            >
+              {store.status === 'INACTIVE' || store.status === 'CLOSED' ? 'CLOSED' : 'OPEN'}
+            </Text>
           </View>
           <Text style={[styles.meta, typography.meta]}>
             {store.area || store.city || 'Nearby'} • {eta}
           </Text>
           <View style={styles.feeRow}>
-            <Ionicons name="bicycle-outline" size={16} color={colors.primary} />
+            <Ionicons name="bicycle" size={16} color={colors.primary} />
             <Text style={[styles.fee, typography.deliveryFee]}>{fee}</Text>
           </View>
         </View>
@@ -107,6 +114,9 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.open,
     letterSpacing: 0.5,
+  },
+  closed: {
+    color: colors.danger,
   },
   meta: {
     color: colors.textSecondary,

@@ -14,6 +14,7 @@ import { OrderHistoryScreen } from '../screens/profile/OrderHistoryScreen';
 import { PaymentMethodsScreen } from '../screens/profile/PaymentMethodsScreen';
 import { SavedAddressesScreen } from '../screens/profile/SavedAddressesScreen';
 import { SettingsScreen } from '../screens/profile/SettingsScreen';
+import { AllSupermarketsScreen } from '../screens/AllSupermarketsScreen';
 import { colors } from '../theme';
 import { AuthNavigator } from './AuthNavigator';
 import { MainTabNavigator } from './MainTabNavigator';
@@ -115,6 +116,11 @@ export function RootNavigator() {
         name="Settings"
         component={SettingsScreen}
         options={{ title: 'Settings' }}
+      />
+      <Stack.Screen
+        name="AllSupermarkets"
+        component={AllSupermarketsScreen}
+        options={{ title: 'All supermarkets' }}
       />
     </Stack.Navigator>
   );

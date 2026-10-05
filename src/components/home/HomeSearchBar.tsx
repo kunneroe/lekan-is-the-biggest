@@ -8,6 +8,7 @@ type Props = {
   onPressFilter?: () => void;
   onSubmit?: () => void;
   placeholder?: string;
+  filterActive?: boolean;
 };
 
 export function HomeSearchBar({
@@ -16,6 +17,7 @@ export function HomeSearchBar({
   onPressFilter,
   onSubmit,
   placeholder = 'Search supermarkets or products',
+  filterActive = false,
 }: Props) {
   return (
     <View style={styles.wrap}>
@@ -36,7 +38,8 @@ export function HomeSearchBar({
         accessibilityRole="button"
         accessibilityLabel="Filters"
       >
-        <Ionicons name="options-outline" size={22} color={colors.primary} />
+        <Ionicons name="options-outline" size={22} color={filterActive ? colors.primary : colors.primary} />
+        {filterActive && <View style={styles.activeDot} />}
       </Pressable>
     </View>
   );
@@ -65,4 +68,16 @@ const styles = StyleSheet.create({
   filterBtn: {
     padding: spacing.xs,
   },
+  activeDot: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    borderWidth: 1.5,
+    borderColor: colors.surface,
+  },
 });
+

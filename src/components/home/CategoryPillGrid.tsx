@@ -6,6 +6,7 @@ export type CategoryGridItem = {
   id: string;
   name: string;
   icon: keyof typeof Ionicons.glyphMap;
+  color: { bg: string; icon: string };
 };
 
 type Props = {
@@ -41,11 +42,17 @@ export function CategoryPillGrid({ categories, selectedId, onSelect }: Props) {
                 style={styles.cell}
                 onPress={() => onSelect?.(cat.id)}
               >
-                <View style={[styles.iconWrap, on && styles.iconOn]}>
+                <View
+                  style={[
+                    styles.iconWrap,
+                    { backgroundColor: cat.color.bg },
+                    on && { borderColor: cat.color.icon },
+                  ]}
+                >
                   <Ionicons
                     name={cat.icon}
                     size={26}
-                    color={on ? colors.surface : colors.primary}
+                    color={cat.color.icon}
                   />
                 </View>
                 <Text
@@ -81,16 +88,11 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: radii.sm,
-    backgroundColor: colors.mint,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
     borderWidth: 2,
     borderColor: 'transparent',
-  },
-  iconOn: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primaryDark,
   },
   label: {
     color: colors.text,

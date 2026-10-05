@@ -20,6 +20,8 @@ import type { RootStackParamList } from '../navigation/navigationRef';
 import { colors, radii, shadows, spacing } from '../theme';
 import { getProductImageUrl } from '../utils/catalogFormat';
 import { parseApiError } from '../utils/parseApiError';
+import { PrimaryButton } from '../components/common/PrimaryButton';
+import { useFavorites } from '../context/FavoriteContext';
 
 type R = RouteProp<RootStackParamList, 'ProductDetail'>;
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -29,8 +31,7 @@ export function ProductDetailScreen() {
   const route = useRoute<R>();
   const navigation = useNavigation<Nav>();
   const { storeId, productId } = route.params;
-  const favoriteIds = new Set();
-  const toggleFavorite = () => Alert.alert('Favorites', 'Mock favorites list.');
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [qty, setQty] = useState(1);
   const [store, setStore] = useState<any>(null);
   const [product, setProduct] = useState<any>(null);
@@ -85,10 +86,10 @@ export function ProductDetailScreen() {
             onPress={() => toggleFavorite(product.id)}
           >
             <Ionicons
-              name={favoriteIds.has(product.id) ? 'heart' : 'heart-outline'}
+              name={isFavorite(product.id) ? 'heart' : 'heart-outline'}
               size={20}
               color={
-                favoriteIds.has(product.id) ? colors.danger : colors.text
+                isFavorite(product.id) ? colors.danger : colors.text
               }
             />
           </Pressable>
@@ -169,40 +170,35 @@ export function ProductDetailScreen() {
           <Text style={styles.barLab}>Total</Text>
           <Text style={styles.barTot}>₦{lineTotal.toLocaleString()}</Text>
         </View>
-        <Pressable
-          style={[styles.barBtn, adding && { opacity: 0.8 }]}
-          disabled={adding}
-          onPress={async () => {
-            if (adding) return;
-            setAdding(true);
-            try {
-              await cartService.addItem(productId, qty);
-              Alert.alert('Success', 'Added to cart!', [
-                { text: 'Continue shopping', style: 'cancel', onPress: () => navigation.goBack() },
-                { text: 'View cart', onPress: () => navigation.navigate('Cart' as never) }
-              ]);
-            } catch (error: unknown) {
-              Alert.alert(
-                'Unable to Add to Cart',
-                parseApiError(error, {
-                  fallback:
-                    'Failed to add item to cart. Make sure you only add items from one supermarket.',
-                }),
-              );
-            } finally {
-              setAdding(false);
-            }
-          }}
-        >
-          {adding ? (
-            <ActivityIndicator size="small" color={colors.surface} />
-          ) : (
-            <Ionicons name="bag-handle-outline" size={20} color={colors.surface} />
-          )}
-          <Text style={styles.barBtnTxt}>
-            Add to cart – ₦{lineTotal.toLocaleString()}
-          </Text>
-        </Pressable>
+        <View style={styles.barBtn}>
+          <PrimaryButton
+            label={`Add to cart – ₦${lineTotal.toLocaleString()}`}
+            icon={adding ? undefined : 'bag-handle'}
+            loading={adding}
+            disabled={adding}
+            onPress={async () => {
+              if (adding) return;
+              setAdding(true);
+              try {
+                await cartService.addItem(productId, qty);
+                Alert.alert('Success', 'Added to cart!', [
+                  { text: 'Continue shopping', style: 'cancel', onPress: () => navigation.goBack() },
+                  { text: 'View cart', onPress: () => navigation.navigate('MainTabs', { screen: 'Cart' }) },
+                ]);
+              } catch (error: unknown) {
+                Alert.alert(
+                  'Unable to Add to Cart',
+                  parseApiError(error, {
+                    fallback:
+                      'Failed to add item to cart. Make sure you only add items from one supermarket.',
+                  }),
+                );
+              } finally {
+                setAdding(false);
+              }
+            }}
+          />
+        </View>
       </View>
     </View>
   );

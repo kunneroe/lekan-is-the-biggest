@@ -134,7 +134,7 @@ export function OrdersScreen() {
               <>
                 <View style={styles.pastHead}>
                   <Text style={styles.pastTitle}>Past orders</Text>
-                  <Pressable onPress={() => Alert.alert('View all', 'Showing all past orders.')}>
+                  <Pressable onPress={() => navigateRoot('OrderHistory')}>
                     <Text style={styles.viewAll}>View all</Text>
                   </Pressable>
                 </View>

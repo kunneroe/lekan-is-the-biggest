@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -17,6 +17,11 @@ import { HomeSearchBar } from '../components/home/HomeSearchBar';
 import { PromoBannerCarousel } from '../components/home/PromoBannerCarousel';
 import { SectionHeader } from '../components/home/SectionHeader';
 import { SupermarketListCard } from '../components/home/SupermarketListCard';
+import {
+  FilterPanelModal,
+  DEFAULT_FILTERS,
+  type FilterState,
+} from '../components/home/FilterPanelModal';
 import { useAddresses } from '../context/AddressContext';
 import { categoryService } from '../services/categoryService';
 import { supermarketService } from '../services/supermarketService';
@@ -44,6 +49,8 @@ export function HomeScreen() {
   } = useAddresses();
 
   const [addrOpen, setAddrOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [homeCategory, setHomeCategory] = useState<string | null>(null);
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [supermarkets, setSupermarkets] = useState<any[]>([]);
@@ -82,6 +89,42 @@ export function HomeScreen() {
     : addressesLoading
       ? 'Loading address…'
       : 'Add a delivery address';
+
+  // Unique, non-null area values from the raw list for the area chip picker
+  const areas = useMemo<string[]>(() => {
+    const seen = new Set<string>();
+    supermarkets.forEach((s) => {
+      if (s.area) seen.add(s.area as string);
+    });
+    return Array.from(seen).sort();
+  }, [supermarkets]);
+
+  // Derived list — filtered and/or sorted from the raw supermarkets state
+  const filteredSupermarkets = useMemo(() => {
+    let list: any[] = [...supermarkets];
+
+    if (filters.area) {
+      list = list.filter((s) => s.area === filters.area);
+    }
+    if (filters.openNowOnly) {
+      list = list.filter((s) => s.status === 'ACTIVE');
+    }
+    if (filters.freeDeliveryOnly) {
+      list = list.filter((s) => Number(s.deliveryFee || 0) === 0);
+    }
+    if (filters.sortByRating) {
+      list = list.slice().sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
+    }
+
+    return list;
+  }, [supermarkets, filters]);
+
+  // True when any filter differs from its default value
+  const isFilterActive =
+    filters.sortByRating ||
+    filters.area !== null ||
+    filters.openNowOnly ||
+    filters.freeDeliveryOnly;
 
   const openStore = (storeId?: string, categoryId?: string) => {
     if (storeId) {
@@ -133,16 +176,11 @@ export function HomeScreen() {
               'Try opening a supermarket to search products there.',
             )
           }
-          onPressFilter={() => Alert.alert('Filters', 'Filter panel.')}
+          onPressFilter={() => setFilterOpen(true)}
+          filterActive={isFilterActive}
         />
         <PromoBannerCarousel />
-        <SectionHeader
-          title="Categories"
-          actionLabel="View all"
-          onPressAction={() =>
-            openStore(supermarkets.length > 0 ? supermarkets[0].id : undefined)
-          }
-        />
+        <SectionHeader title="Categories" />
         <CategoryPillGrid
           categories={toCategoryGridItems(categories)}
           selectedId={homeCategory}
@@ -152,12 +190,29 @@ export function HomeScreen() {
           }}
         />
         <View style={styles.sectionSpacer} />
-        <SectionHeader title="Supermarkets Near You" />
+        <SectionHeader
+          title="Supermarkets Near You"
+          actionLabel="View all"
+          onPressAction={() => navigateRoot('AllSupermarkets')}
+        />
 
         {loading ? (
           <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: spacing.xl }} />
+        ) : filteredSupermarkets.length === 0 ? (
+          <View style={styles.emptyFilterWrap}>
+            <Text style={styles.emptyFilterTitle}>No stores match your filters</Text>
+            <Text style={styles.emptyFilterSub}>
+              Try adjusting or clearing your filters to see more stores.
+            </Text>
+            <Pressable
+              style={styles.clearFiltersBtn}
+              onPress={() => setFilters(DEFAULT_FILTERS)}
+            >
+              <Text style={styles.clearFiltersBtnTxt}>Clear filters</Text>
+            </Pressable>
+          </View>
         ) : (
-          supermarkets.map((store) => (
+          filteredSupermarkets.map((store) => (
             <SupermarketListCard
               key={store.id}
               store={store}
@@ -211,6 +266,14 @@ export function HomeScreen() {
           </View>
         </View>
       </Modal>
+
+      <FilterPanelModal
+        visible={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        areas={areas}
+        value={filters}
+        onApply={setFilters}
+      />
     </View>
   );
 }
@@ -285,5 +348,35 @@ const styles = StyleSheet.create({
   addBtnTxt: {
     color: colors.surface,
     fontWeight: '700',
+  },
+  emptyFilterWrap: {
+    alignItems: 'center',
+    paddingVertical: spacing.xxxl,
+    gap: spacing.sm,
+  },
+  emptyFilterTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+    textAlign: 'center',
+  },
+  emptyFilterSub: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: spacing.xl,
+  },
+  clearFiltersBtn: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    backgroundColor: colors.primary,
+    borderRadius: radii.md,
+  },
+  clearFiltersBtnTxt: {
+    color: colors.surface,
+    fontWeight: '700',
+    fontSize: 14,
   },
 });

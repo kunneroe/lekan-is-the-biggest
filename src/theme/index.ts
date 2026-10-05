@@ -1,5 +1,5 @@
 export const colors = {
-  background: '#F6FAF7',
+  background: '#FAF8F3',
   surface: '#FFFFFF',
   primary: '#006847',
   primaryDark: '#004D40',
@@ -66,4 +66,20 @@ export const shadows = {
     shadowRadius: 4,
     elevation: 2,
   },
+} as const;
+
+export const categoryColors = {
+  groceries:        { bg: '#E3F2E1', icon: '#2F6B3A' },
+  drinks:           { bg: '#FDECD8', icon: '#C6742B' },
+  snacks:           { bg: '#FDEBD3', icon: '#C77A1E' },
+  toiletries:       { bg: '#FBE7EC', icon: '#B4436C' },
+  household:        { bg: '#E3EEF7', icon: '#2C6E9E' },
+  frozen:           { bg: '#E5F3F7', icon: '#2A7C93' },
+  'frozen-foods':   { bg: '#E5F3F7', icon: '#2A7C93' },
+  baby:             { bg: '#EFE7F7', icon: '#6A4A96' },
+  'baby-products':  { bg: '#EFE7F7', icon: '#6A4A96' },
+  cleaning:         { bg: '#F5E1DA', icon: '#B4552D' },
+  'cleaning-items': { bg: '#F5E1DA', icon: '#B4552D' },
+  'personal-care':  { bg: '#FBE7EC', icon: '#B4436C' },
+  default:          { bg: '#EFEFEF', icon: '#666666' },
 } as const;

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProductImage } from '../components/ProductImage';
+import { PrimaryButton } from '../components/common/PrimaryButton';
 import { navigateRoot } from '../navigation/navigationRef';
 import { cartService } from '../services/cartService';
 import { supermarketService } from '../services/supermarketService';
@@ -210,13 +211,13 @@ export function CartScreen() {
           </View>
         </View>
       </ScrollView>
-      <Pressable
-        style={[styles.checkout, { paddingBottom: insets.bottom + spacing.md }]}
-        onPress={() => navigateRoot('Checkout', { storeId: store.id })}
-      >
-        <Text style={styles.checkoutTxt}>Proceed to checkout</Text>
-        <Ionicons name="chevron-forward" size={22} color={colors.surface} />
-      </Pressable>
+      <View style={[styles.checkoutBar, { paddingBottom: insets.bottom + spacing.md }]}>
+        <PrimaryButton
+          label="Proceed to checkout"
+          icon="chevron-forward"
+          onPress={() => navigateRoot('Checkout', { storeId: store.id })}
+        />
+      </View>
     </View>
   );
 }
@@ -332,18 +333,15 @@ const styles = StyleSheet.create({
   },
   totLab: { fontWeight: '800', color: colors.text },
   totVal: { fontWeight: '800', color: colors.primary, fontSize: 18 },
-  checkout: {
+  checkoutBar: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: colors.primary,
-    paddingTop: spacing.lg,
+    backgroundColor: colors.surface,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    paddingTop: spacing.md,
     paddingHorizontal: spacing.xl,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
   },
-  checkoutTxt: { color: colors.surface, fontWeight: '800', fontSize: 16 },
 });

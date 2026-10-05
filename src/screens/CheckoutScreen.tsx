@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProductImage } from '../components/ProductImage';
+import { PrimaryButton } from '../components/common/PrimaryButton';
 
 import { cartService } from '../services/cartService';
 import { supermarketService } from '../services/supermarketService';
@@ -295,23 +296,13 @@ export function CheckoutScreen() {
           <Text style={styles.totalVal}>₦{Number(total || 0).toLocaleString()}</Text>
         </View>
       </View>
-      <Pressable
-        style={[styles.cta, placing && styles.ctaDisabled]}
+      <PrimaryButton
+        label={placing ? 'Placing order…' : 'Place order'}
+        icon={placing ? undefined : 'arrow-forward'}
+        loading={placing}
         disabled={placing}
         onPress={handlePlaceOrder}
-      >
-        {placing ? (
-          <>
-            <ActivityIndicator color={colors.surface} />
-            <Text style={styles.ctaTxt}>Placing order…</Text>
-          </>
-        ) : (
-          <>
-            <Text style={styles.ctaTxt}>Place order</Text>
-            <Ionicons name="arrow-forward" size={20} color={colors.surface} />
-          </>
-        )}
-      </Pressable>
+      />
     </ScrollView>
   );
 }

@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AddressProvider } from './src/context/AddressContext';
 import { AuthProvider } from './src/context/AuthContext';
+import { FavoriteProvider } from './src/context/FavoriteContext';
 import { OnboardingGateProvider } from './src/context/OnboardingGateContext';
 import { ToastProvider } from './src/context/ToastContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
@@ -14,12 +15,14 @@ export default function App() {
       <OnboardingGateProvider>
         <AuthProvider>
           <AddressProvider>
-            <NavigationContainer ref={navigationRef}>
-              <ToastProvider>
-                <RootNavigator />
-                <StatusBar style="dark" />
-              </ToastProvider>
-            </NavigationContainer>
+            <FavoriteProvider>
+              <NavigationContainer ref={navigationRef}>
+                <ToastProvider>
+                  <RootNavigator />
+                  <StatusBar style="dark" />
+                </ToastProvider>
+              </NavigationContainer>
+            </FavoriteProvider>
           </AddressProvider>
         </AuthProvider>
       </OnboardingGateProvider>

@@ -31,6 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async (showAlert = false) => {
     await AsyncStorage.removeItem('userToken');
+    await AsyncStorage.removeItem('refreshToken');
     await AsyncStorage.removeItem('userData');
     setIsSignedIn(false);
     setUser(null);
@@ -94,9 +95,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback(async (email: string, password: string) => {
     const data = await authService.login({ identifier: email, password });
-    const { user, accessToken } = data;
+    const { user, accessToken, refreshToken } = data;
 
     if (accessToken) await AsyncStorage.setItem('userToken', accessToken);
+    if (refreshToken) await AsyncStorage.setItem('refreshToken', refreshToken);
     if (user) await AsyncStorage.setItem('userData', JSON.stringify(user));
 
     setUser(user);
@@ -105,9 +107,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const registerUser = useCallback(async (userData: any) => {
     const data = await authService.register(userData);
-    const { user, accessToken } = data;
+    const { user, accessToken, refreshToken } = data;
 
     if (accessToken) await AsyncStorage.setItem('userToken', accessToken);
+    if (refreshToken) await AsyncStorage.setItem('refreshToken', refreshToken);
     if (user) await AsyncStorage.setItem('userData', JSON.stringify(user));
 
     setUser(user);

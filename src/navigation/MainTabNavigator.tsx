@@ -88,7 +88,7 @@ function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
               <View>
                 <Ionicons
                   name={iconName as keyof typeof Ionicons.glyphMap}
-                  size={22}
+                  size={24}
                   color={isFocused ? colors.primary : colors.textSecondary}
                 />
                 {badge > 0 ? (

@@ -2,24 +2,53 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/navigationRef';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProductImage } from '../../components/ProductImage';
 
-import { getCategoryLabel, getProductById } from '../../data/products';
+import { useFavorites } from '../../context/FavoriteContext';
+import { cartService } from '../../services/cartService';
 import { navigateRoot } from '../../navigation/navigationRef';
 import { colors, radii, shadows, spacing, typography } from '../../theme';
+import { getProductImageUrl } from '../../utils/catalogFormat';
+import { parseApiError } from '../../utils/parseApiError';
 
 export function FavoritesScreen() {
   const insets = useSafeAreaInsets();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const favoriteIds = new Set<string>();
-  const toggleFavorite = (id: string) => {};
-  const addToCart = async (storeId: string, product: any, qty: number) => {};
-  const products = [...favoriteIds]
-    .map((id) => getProductById(id))
-    .filter(Boolean);
+  const { favorites, loading, toggleFavorite } = useFavorites();
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  const handleAddToCart = async (productId: string) => {
+    try {
+      await cartService.addItem(productId, 1);
+      Alert.alert('Added to cart', 'Item added successfully!');
+    } catch (error: unknown) {
+      Alert.alert(
+        'Unable to Add to Cart',
+        parseApiError(error, {
+          fallback:
+            'Failed to add item to cart. Make sure you only add items from one supermarket.',
+        }),
+      );
+    }
+  };
 
   return (
     <ScrollView
@@ -29,7 +58,7 @@ export function FavoritesScreen() {
         paddingBottom: insets.bottom + spacing.xxl,
       }}
     >
-      {products.length === 0 ? (
+      {favorites.length === 0 ? (
         <View style={styles.emptyWrap}>
           <Ionicons name="heart-outline" size={64} color={colors.textMuted} />
           <Text style={styles.emptyTitle}>No favorites yet</Text>
@@ -47,47 +76,62 @@ export function FavoritesScreen() {
           </Pressable>
         </View>
       ) : null}
-      {products.map((p) =>
-        p ? (
-          <View key={p.id} style={styles.card}>
+
+      {favorites.map((fav) => {
+        const p = fav.product;
+        const storeId = p.supermarket?.id ?? p.supermarketId;
+        const imageUri = getProductImageUrl(p);
+
+        return (
+          <View key={fav.id} style={styles.card}>
             <Pressable
               style={styles.row}
               onPress={() =>
                 navigateRoot('ProductDetail', {
-                  storeId: p.storeId,
+                  storeId: storeId ?? '',
                   productId: p.id,
                 })
               }
             >
-              <ProductImage uri={p.image} style={styles.img} label={p.name} />
+              <ProductImage uri={imageUri} style={styles.img} label={p.name} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.name}>{p.name}</Text>
-                <Text style={styles.cat}>{getCategoryLabel(p.categoryId)}</Text>
-                <Text style={styles.price}>₦{Number(p.price || 0).toLocaleString()}</Text>
+                {p.supermarket?.name ? (
+                  <Text style={styles.store}>{p.supermarket.name}</Text>
+                ) : null}
+                <Text style={styles.price}>
+                  ₦{Number(p.price || 0).toLocaleString()}
+                </Text>
               </View>
             </Pressable>
             <View style={styles.actions}>
-              <Pressable onPress={() => toggleFavorite(p.id)} hitSlop={12}>
+              <Pressable
+                onPress={() => void toggleFavorite(p.id)}
+                hitSlop={12}
+              >
                 <Ionicons name="heart" size={22} color={colors.danger} />
               </Pressable>
               <Pressable
                 style={styles.add}
-                onPress={() => {
-                  addToCart(p.storeId, p, 1);
-                }}
+                onPress={() => void handleAddToCart(p.id)}
               >
                 <Ionicons name="cart" size={18} color={colors.surface} />
                 <Text style={styles.addTxt}>Add</Text>
               </Pressable>
             </View>
           </View>
-        ) : null,
-      )}
+        );
+      })}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   emptyWrap: {
     flex: 1,
     alignItems: 'center',
@@ -126,7 +170,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: spacing.md, padding: spacing.lg },
   img: { width: 88, height: 88, borderRadius: radii.md },
   name: { fontWeight: '800', color: colors.text },
-  cat: { color: colors.textSecondary, fontSize: 12, marginTop: 4 },
+  store: { color: colors.textSecondary, fontSize: 12, marginTop: 4 },
   price: { fontWeight: '800', color: colors.primary, marginTop: spacing.sm },
   actions: {
     flexDirection: 'row',
