@@ -108,10 +108,13 @@ export function TrackOrderScreen() {
   const progress = isCancelled ? 0 : Math.min((step + 1) / trackingSteps.length, 1);
 
   const cancelledBy = trackingData.cancelledBy || orderData?.cancelledBy;
+  const reasonText = trackingData.cancellationReason || orderData?.cancellationReason;
   const cancelReason =
     cancelledBy === 'SYSTEM'
       ? "The store didn't accept your order in time."
-      : trackingData.cancellationReason || orderData?.cancellationReason || 'This order was cancelled.';
+      : cancelledBy === 'ADMIN'
+        ? `Cancelled by Grocr support${reasonText ? `: ${reasonText}` : '.'}`
+        : reasonText || 'This order was cancelled.';
 
   // Rider info — backend uses rider.fullName, rider.vehicleType, rider.vehiclePlate
   const riderRaw = trackingData.rider || orderData?.rider || null;
