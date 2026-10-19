@@ -22,13 +22,15 @@ export function TrackOrderScreen() {
   const [orderData, setOrderData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  // Must cover every backend OrderStatus except CANCELLED (handled separately below).
   const STATUS_TO_STEP: Record<string, number> = {
     CONFIRMED: 0,
     PREPARING: 1,
-    RIDER_ASSIGNED: 2,
-    PICKED_UP: 3,
-    ON_THE_WAY: 4,
-    DELIVERED: 5,
+    READY: 2,
+    RIDER_ASSIGNED: 3,
+    PICKED_UP: 4,
+    ON_THE_WAY: 5,
+    DELIVERED: 6,
   };
 
   useEffect(() => {
@@ -91,17 +93,25 @@ export function TrackOrderScreen() {
   // Derive stepIndex from backend status string
   const status = trackingData.status || orderData?.status || '';
   const step = STATUS_TO_STEP[status] ?? 0;
+  const isCancelled = status === 'CANCELLED';
 
   const trackingSteps = [
     'Order placed',
     'Store accepted order',
+    'Packed, waiting for rider',
     'Rider assigned',
     'Rider at store',
     'Heading to you',
     'Delivered',
   ];
 
-  const progress = Math.min((step + 1) / trackingSteps.length, 1);
+  const progress = isCancelled ? 0 : Math.min((step + 1) / trackingSteps.length, 1);
+
+  const cancelledBy = trackingData.cancelledBy || orderData?.cancelledBy;
+  const cancelReason =
+    cancelledBy === 'SYSTEM'
+      ? "The store didn't accept your order in time."
+      : trackingData.cancellationReason || orderData?.cancellationReason || 'This order was cancelled.';
 
   // Rider info — backend uses rider.fullName, rider.vehicleType, rider.vehiclePlate
   const riderRaw = trackingData.rider || orderData?.rider || null;
@@ -142,27 +152,39 @@ export function TrackOrderScreen() {
       </View>
       <View style={styles.sheet}>
         <View style={styles.row1}>
-          <Text style={styles.eta}>Arriving in {eta}</Text>
+          <Text style={styles.eta}>{isCancelled ? 'Cancelled' : `Arriving in ${eta}`}</Text>
           <Text style={styles.price}>₦{Number(total || 0).toLocaleString()}</Text>
         </View>
         <View style={styles.barBg}>
           <View style={[styles.barFg, { width: `${progress * 100}%` }]} />
         </View>
-        <View style={styles.statusRow}>
-          <View style={styles.bike}>
-            <Ionicons name="bicycle" size={20} color={colors.primary} />
+        {isCancelled ? (
+          <View style={styles.statusRow}>
+            <View style={[styles.bike, styles.cancelIcon]}>
+              <Ionicons name="close" size={20} color={colors.danger} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.stTitle, styles.cancelTitle]}>Order cancelled</Text>
+              <Text style={styles.stSub}>{cancelReason}</Text>
+            </View>
           </View>
-          <View>
-            <Text style={styles.stTitle}>
-              {trackingSteps[Math.min(step, trackingSteps.length - 1)]}
-            </Text>
-            <Text style={styles.stSub}>
-              {riderName !== 'Assigning rider...'
-                ? `${riderName} is handling your order`
-                : 'Waiting for rider assignment...'}
-            </Text>
+        ) : (
+          <View style={styles.statusRow}>
+            <View style={styles.bike}>
+              <Ionicons name="bicycle" size={20} color={colors.primary} />
+            </View>
+            <View>
+              <Text style={styles.stTitle}>
+                {trackingSteps[Math.min(step, trackingSteps.length - 1)]}
+              </Text>
+              <Text style={styles.stSub}>
+                {riderName !== 'Assigning rider...'
+                  ? `${riderName} is handling your order`
+                  : 'Waiting for rider assignment...'}
+              </Text>
+            </View>
           </View>
-        </View>
+        )}
         <View style={styles.div} />
         <View style={styles.rider}>
           <View style={styles.riderAvatar}>
@@ -258,6 +280,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stTitle: { fontWeight: '800', color: colors.primary, fontSize: 16 },
+  cancelIcon: { backgroundColor: colors.border },
+  cancelTitle: { color: colors.danger },
   stSub: { color: colors.textSecondary, fontSize: 13, marginTop: 2 },
   div: { height: 1, backgroundColor: colors.border, marginVertical: spacing.lg },
   rider: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.lg },

@@ -24,7 +24,7 @@ export function OrdersScreen() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const ACTIVE_STATUSES = ['CONFIRMED', 'PREPARING', 'RIDER_ASSIGNED', 'PICKED_UP', 'ON_THE_WAY'];
+  const ACTIVE_STATUSES = ['CONFIRMED', 'PREPARING', 'READY', 'RIDER_ASSIGNED', 'PICKED_UP', 'ON_THE_WAY'];
   const PAST_STATUSES = ['DELIVERED', 'CANCELLED'];
 
   useFocusEffect(
