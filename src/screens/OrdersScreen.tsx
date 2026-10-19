@@ -16,6 +16,7 @@ import { orderService } from '../services/orderService';
 import { navigateRoot } from '../navigation/navigationRef';
 import { colors, radii, shadows, spacing, typography } from '../theme';
 import { parseApiError } from '../utils/parseApiError';
+import { cancellationText } from '../utils/orderStatus';
 
 export function OrdersScreen() {
   const insets = useSafeAreaInsets();
@@ -233,16 +234,29 @@ function PastRow({ order }: { order: any }) {
   const displayTotal = Number(order.totalAmount ?? order.total ?? 0);
   const displayDate = order.placedAt || order.createdAt;
 
+  const isCancelled = order.status === 'CANCELLED';
+
   return (
     <View style={styles.pastRow}>
-      <View style={styles.pastIcon}>
-        <Ionicons name="storefront-outline" size={20} color={colors.primary} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.pastStore}>{storeName}</Text>
-        <Text style={styles.pastDate}>{new Date(displayDate).toLocaleDateString()}</Text>
-      </View>
-      <Text style={styles.pastPrice}>₦{displayTotal.toLocaleString()}</Text>
+      {/* Tapping the order opens its detail/tracking view; Reorder (below) is a separate button. */}
+      <Pressable
+        style={styles.pastMain}
+        accessibilityRole="button"
+        accessibilityLabel={`Open order from ${storeName}`}
+        onPress={() => navigateRoot('TrackOrder', { orderId: order.id })}
+      >
+        <View style={styles.pastIcon}>
+          <Ionicons name="storefront-outline" size={20} color={colors.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.pastStore}>{storeName}</Text>
+          <Text style={styles.pastDate}>{new Date(displayDate).toLocaleDateString()}</Text>
+          {isCancelled && (
+            <Text style={styles.pastCancel} numberOfLines={2}>{cancellationText(order)}</Text>
+          )}
+        </View>
+        <Text style={styles.pastPrice}>₦{displayTotal.toLocaleString()}</Text>
+      </Pressable>
       <Pressable
         style={styles.reorder}
         onPress={() => {
@@ -402,6 +416,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  pastMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  pastCancel: { color: colors.danger, fontSize: 12, fontWeight: '600', marginTop: 2 },
   pastStore: { fontWeight: '700', color: colors.text },
   pastDate: { color: colors.textSecondary, fontSize: 12 },
   pastPrice: { fontWeight: '800', color: colors.primary },

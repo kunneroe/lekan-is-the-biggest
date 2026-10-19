@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { navigateRoot } from '../../navigation/navigationRef';
 import { orderService } from '../../services/orderService';
 import { colors, radii, shadows, spacing, typography } from '../../theme';
+import { cancellationText } from '../../utils/orderStatus';
 
 export function OrderHistoryScreen() {
   const insets = useSafeAreaInsets();
@@ -67,25 +68,35 @@ export function OrderHistoryScreen() {
         const storeId = o.storeId || o.supermarketId;
 
         return (
-          <Pressable
-            key={o.id}
-            style={styles.row}
-            onPress={() => navigateRoot('Store', { storeId })}
-          >
-            <View style={styles.iconWrap}>
-              <Ionicons name="storefront-outline" size={20} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.store}>{storeName}</Text>
-              <Text style={styles.meta}>
-                {date} ·{' '}
-                <Text style={isCancelled ? styles.cancelled : styles.delivered}>
-                  {statusLabel}
+          <View key={o.id} style={styles.row}>
+            {/* Tapping the order opens its detail/tracking view; Reorder is a separate button. */}
+            <Pressable
+              style={styles.main}
+              accessibilityRole="button"
+              accessibilityLabel={`Open order from ${storeName}`}
+              onPress={() => navigateRoot('TrackOrder', { orderId: o.id })}
+            >
+              <View style={styles.iconWrap}>
+                <Ionicons name="storefront-outline" size={20} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.store}>{storeName}</Text>
+                <Text style={styles.meta}>
+                  {date} ·{' '}
+                  <Text style={isCancelled ? styles.cancelled : styles.delivered}>
+                    {statusLabel}
+                  </Text>
                 </Text>
-              </Text>
-            </View>
-            <Text style={styles.price}>₦{total.toLocaleString()}</Text>
-          </Pressable>
+                {isCancelled && (
+                  <Text style={styles.reason} numberOfLines={2}>{cancellationText(o)}</Text>
+                )}
+              </View>
+              <Text style={styles.price}>₦{total.toLocaleString()}</Text>
+            </Pressable>
+            <Pressable style={styles.reorder} onPress={() => navigateRoot('Store', { storeId })}>
+              <Text style={styles.reorderTxt}>Reorder</Text>
+            </Pressable>
+          </View>
         );
       })}
     </ScrollView>
@@ -140,6 +151,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  main: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  reason: { color: colors.danger, fontSize: 12, fontWeight: '600', marginTop: 2 },
+  reorder: {
+    backgroundColor: '#FFF3E0',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.pill,
+  },
+  reorderTxt: { color: colors.bannerOrange, fontWeight: '700', fontSize: 12 },
   store: { fontWeight: '800', color: colors.text },
   meta: { color: colors.textSecondary, fontSize: 12, marginTop: 4 },
   delivered: { color: colors.open, fontWeight: '700' },
