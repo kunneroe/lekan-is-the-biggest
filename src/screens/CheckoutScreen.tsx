@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LoaderView } from '../components/brand/GrabitLoader';
 import { EmptyState } from '../components/common/EmptyState';
 import { PrimaryButton } from '../components/common/PrimaryButton';
+import { SummaryRow } from '../components/common/SummaryRow';
 import { FadeInUp } from '../components/motion/FadeInUp';
 import { ProductImage } from '../components/ProductImage';
 
@@ -31,6 +32,7 @@ import {
 import { formatAddressLabel, formatAddressLine } from '../utils/addressFormat';
 import { haptic } from '../utils/haptics';
 import { parseApiError } from '../utils/parseApiError';
+import { useBarHeight, useLayout } from '../utils/responsive';
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type R = RouteProp<RootStackParamList, 'Checkout'>;
 
@@ -48,7 +50,7 @@ function Section({ n, title, right, children }: { n: number; title: string; righ
           <View style={styles.num}>
             <Text style={styles.numTxt}>{n}</Text>
           </View>
-          <Text style={styles.h}>{title}</Text>
+          <Text maxFontSizeMultiplier={1.25} style={styles.h}>{title}</Text>
         </View>
         {right}
       </View>
@@ -71,6 +73,8 @@ export function CheckoutScreen() {
   const [note, setNote] = useState('Call me when you get to the gate');
   const [payId, setPayId] = useState('card');
   const [placing, setPlacing] = useState(false);
+  const [barH, onBarLayout] = useBarHeight(110);
+  const { gutter } = useLayout();
 
   const fetchCart = useCallback(async () => {
     try {
@@ -184,7 +188,7 @@ export function CheckoutScreen() {
   return (
     <View style={styles.screen}>
       <ScrollView
-        contentContainerStyle={{ padding: spacing.xl, paddingBottom: insets.bottom + 140 }}
+        contentContainerStyle={{ padding: gutter, paddingTop: spacing.xl, paddingBottom: barH + spacing.xl }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -277,28 +281,16 @@ export function CheckoutScreen() {
               </View>
             ))}
             <View style={styles.div} />
-            <View style={styles.sumRow}>
-              <Text style={styles.sumLab}>Subtotal</Text>
-              <Text style={styles.sumVal}>₦{Number(subtotal || 0).toLocaleString()}</Text>
-            </View>
-            <View style={styles.sumRow}>
-              <Text style={styles.sumLab}>Delivery fee</Text>
-              <Text style={styles.sumVal}>₦{Number(deliveryFee || 0).toLocaleString()}</Text>
-            </View>
-            <View style={styles.sumRow}>
-              <Text style={styles.sumLab}>Service fee</Text>
-              <Text style={styles.sumVal}>₦{Number(serviceFee || 0).toLocaleString()}</Text>
-            </View>
+            <SummaryRow label="Subtotal" value={`₦${Number(subtotal || 0).toLocaleString()}`} />
+            <SummaryRow label="Delivery fee" value={`₦${Number(deliveryFee || 0).toLocaleString()}`} />
+            <SummaryRow label="Service fee" value={`₦${Number(serviceFee || 0).toLocaleString()}`} />
             <View style={styles.div} />
-            <View style={styles.sumRow}>
-              <Text style={styles.totalLab}>Total</Text>
-              <Text style={styles.totalVal}>₦{Number(total || 0).toLocaleString()}</Text>
-            </View>
+            <SummaryRow label="Total" emphasis value={`₦${Number(total || 0).toLocaleString()}`} />
           </View>
         </Section>
       </ScrollView>
 
-      <View style={[styles.bar, { paddingBottom: insets.bottom + spacing.md }]}>
+      <View style={[styles.bar, { paddingBottom: insets.bottom + spacing.md }]} onLayout={onBarLayout}>
         <PrimaryButton
           label={placing ? 'Placing your order…' : `Place order · ₦${Number(total || 0).toLocaleString()}`}
           icon={placing ? undefined : 'arrow-forward'}
@@ -413,11 +405,6 @@ const styles = StyleSheet.create({
   iqty: { fontFamily: fonts.regular, color: colors.textSecondary, fontSize: 12, marginTop: 2 },
   iprice: { fontFamily: fonts.bold, color: colors.text, fontSize: 14 },
   div: { borderBottomWidth: 1.5, borderStyle: 'dashed', borderColor: colors.border, marginVertical: spacing.md },
-  sumRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm },
-  sumLab: { fontFamily: fonts.regular, fontSize: 15, color: colors.textSecondary },
-  sumVal: { fontFamily: fonts.semibold, fontSize: 15, color: colors.text },
-  totalLab: { fontFamily: fonts.bold, fontSize: 16, color: colors.text },
-  totalVal: { fontFamily: fonts.display, fontSize: 20, color: colors.primary },
   bar: {
     position: 'absolute',
     left: 0,

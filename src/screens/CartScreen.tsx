@@ -7,6 +7,8 @@ import { GrabitLoader, LoaderView } from '../components/brand/GrabitLoader';
 import { GrabitMark } from '../components/brand/GrabitMark';
 import { EmptyState } from '../components/common/EmptyState';
 import { PrimaryButton } from '../components/common/PrimaryButton';
+import { SummaryRow } from '../components/common/SummaryRow';
+import { AnimatedPrice } from '../components/motion/AnimatedPrice';
 import { FadeInUp } from '../components/motion/FadeInUp';
 import { PressableScale } from '../components/motion/PressableScale';
 import { ProductImage } from '../components/ProductImage';
@@ -17,6 +19,7 @@ import { brand, colors, fonts, radii, shadows, spacing } from '../theme';
 import { getCartItemImageUrl, getCartUnitPrice, type ApiCartItem } from '../utils/catalogFormat';
 import { haptic } from '../utils/haptics';
 import { parseApiError } from '../utils/parseApiError';
+import { TEXT_CAP, useBarHeight, useLayout } from '../utils/responsive';
 
 export function CartScreen() {
   const insets = useSafeAreaInsets();
@@ -26,6 +29,8 @@ export function CartScreen() {
   const [store, setStore] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [barH, onBarLayout] = useBarHeight(84);
+  const { gutter } = useLayout();
 
   const fetchCart = useCallback(async () => {
     try {
@@ -120,7 +125,7 @@ export function CartScreen() {
     <View style={styles.screen}>
       <View style={[styles.head, { paddingTop: insets.top + spacing.md }]}>
         <View>
-          <Text style={styles.headTitle}>Your cart</Text>
+          <Text maxFontSizeMultiplier={1.25} style={styles.headTitle}>Your cart</Text>
           <Text style={styles.headSub}>
             {count} {count === 1 ? 'item' : 'items'}
           </Text>
@@ -128,7 +133,12 @@ export function CartScreen() {
         {updating ? <GrabitLoader size={28} /> : <GrabitMark size={30} />}
       </View>
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: 150 }}
+        contentContainerStyle={{
+          paddingHorizontal: gutter,
+          paddingTop: spacing.sm,
+          // reserve exactly the floating bar's height (it grows with big fonts)
+          paddingBottom: barH + spacing.md * 2 + spacing.lg,
+        }}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.banner}>
@@ -149,7 +159,7 @@ export function CartScreen() {
                   {l.product?.name}
                 </Text>
                 {l.product?.unit ? <Text style={styles.psub}>{l.product?.unit}</Text> : null}
-                <Text style={styles.pprice}>₦{getCartUnitPrice(l).toLocaleString()}</Text>
+                <Text maxFontSizeMultiplier={1.25} style={styles.pprice}>₦{getCartUnitPrice(l).toLocaleString()}</Text>
               </View>
               <View style={styles.step}>
                 <PressableScale
@@ -193,34 +203,26 @@ export function CartScreen() {
         </Pressable>
 
         <View style={styles.summary}>
-          <Text style={styles.sumTitle}>Order summary</Text>
-          <View style={styles.sumRow}>
-            <Text style={styles.sumLab}>Subtotal</Text>
-            <Text style={styles.sumVal}>₦{Number(subtotal || 0).toLocaleString()}</Text>
-          </View>
-          <View style={styles.sumRow}>
-            <Text style={styles.sumLab}>Delivery fee</Text>
-            <Text style={[styles.sumVal, deliveryFee === 0 && { color: colors.primary }]}>
-              {deliveryFee === 0 ? 'Free' : `₦${Number(deliveryFee || 0).toLocaleString()}`}
-            </Text>
-          </View>
-          <View style={styles.sumRow}>
-            <Text style={styles.sumLab}>Service fee</Text>
-            <Text style={styles.sumVal}>₦{Number(serviceFee || 0).toLocaleString()}</Text>
-          </View>
+          <Text maxFontSizeMultiplier={1.25} style={styles.sumTitle}>Order summary</Text>
+          <SummaryRow label="Subtotal" value={<AnimatedPrice value={subtotal} style={styles.sumVal} />} />
+          <SummaryRow
+            label="Delivery fee"
+            value={deliveryFee === 0 ? 'Free' : `₦${Number(deliveryFee || 0).toLocaleString()}`}
+            valueColor={deliveryFee === 0 ? colors.primary : undefined}
+          />
+          <SummaryRow label="Service fee" value={`₦${Number(serviceFee || 0).toLocaleString()}`} />
           <View style={styles.div} />
-          <View style={styles.sumRow}>
-            <Text style={styles.totLab}>Total</Text>
-            <Text style={styles.totVal}>₦{Number(total || 0).toLocaleString()}</Text>
-          </View>
+          <SummaryRow label="Total" emphasis value={<AnimatedPrice value={total} style={styles.totVal} />} />
         </View>
       </ScrollView>
-      <View style={styles.checkoutBar}>
-        <View>
-          <Text style={styles.barLab}>Total</Text>
-          <Text style={styles.barTot}>₦{Number(total || 0).toLocaleString()}</Text>
+      <View style={styles.checkoutBar} onLayout={onBarLayout}>
+        <View style={styles.barLeft}>
+          <Text style={styles.barLab} maxFontSizeMultiplier={TEXT_CAP.control}>
+            Total
+          </Text>
+          <AnimatedPrice value={total} style={styles.barTot} fit />
         </View>
-        <View style={{ flex: 1, maxWidth: 220 }}>
+        <View style={styles.barBtn}>
           <PrimaryButton
             label="Checkout"
             icon="arrow-forward"
@@ -309,17 +311,16 @@ const styles = StyleSheet.create({
   addMoreTxt: { fontFamily: fonts.bold, color: colors.primary, fontSize: 15 },
   summary: { backgroundColor: colors.surface, borderRadius: radii.xl, padding: spacing.lg, ...shadows.soft },
   sumTitle: { fontFamily: fonts.display, fontSize: 18, marginBottom: spacing.md, color: colors.text },
-  sumRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm },
-  sumLab: { fontFamily: fonts.regular, fontSize: 15, color: colors.textSecondary },
-  sumVal: { fontFamily: fonts.semibold, fontSize: 15, color: colors.text },
+  sumVal: { fontFamily: fonts.semibold, fontSize: 15, color: colors.text, textAlign: 'right' },
+  barLeft: { flexShrink: 1, minWidth: 84 },
+  barBtn: { flexGrow: 1, flexShrink: 0, flexBasis: 150, maxWidth: 230 },
   div: {
     borderBottomWidth: 1.5,
     borderStyle: 'dashed',
     borderColor: colors.border,
     marginVertical: spacing.md,
   },
-  totLab: { fontFamily: fonts.bold, fontSize: 16, color: colors.text },
-  totVal: { fontFamily: fonts.display, fontSize: 20, color: colors.primary },
+  totVal: { fontFamily: fonts.display, fontSize: 20, color: colors.primary, textAlign: 'right' },
   checkoutBar: {
     position: 'absolute',
     left: spacing.md,

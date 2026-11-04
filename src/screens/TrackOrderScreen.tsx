@@ -224,10 +224,10 @@ export function TrackOrderScreen() {
             <View style={styles.row1}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.etaLab}>{isCancelled ? 'Status' : 'Arriving in'}</Text>
-                <Text style={[styles.eta, isCancelled && { color: colors.danger }]}>{isCancelled ? 'Cancelled' : eta}</Text>
+                <Text maxFontSizeMultiplier={1.25} style={[styles.eta, isCancelled && { color: colors.danger }]}>{isCancelled ? 'Cancelled' : eta}</Text>
               </View>
               <View style={styles.pricePill}>
-                <Text style={styles.price}>₦{Number(total || 0).toLocaleString()}</Text>
+                <Text maxFontSizeMultiplier={1.25} style={styles.price}>₦{Number(total || 0).toLocaleString()}</Text>
               </View>
             </View>
             <View style={styles.barBg}>
@@ -247,7 +247,7 @@ export function TrackOrderScreen() {
                   <Ionicons name="close" size={20} color={colors.danger} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.cancelTitle}>Order cancelled</Text>
+                  <Text maxFontSizeMultiplier={1.25} style={styles.cancelTitle}>Order cancelled</Text>
                   <Text style={styles.stSub}>{cancelReason}</Text>
                 </View>
               </View>
@@ -330,7 +330,7 @@ export function TrackOrderScreen() {
 
             {lines.length > 0 ? (
               <>
-                <Text style={styles.sec}>In your bag</Text>
+                <Text maxFontSizeMultiplier={1.25} style={styles.sec}>In your bag</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
                   {lines.slice(0, 4).map((l: any, i: number) => (
                     <ProductImage

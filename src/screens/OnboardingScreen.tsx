@@ -176,7 +176,7 @@ export function OnboardingScreen() {
             transform: [{ translateY: textAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }],
           }}
         >
-          <Text style={styles.cardTitle}>{slide.title}</Text>
+          <Text maxFontSizeMultiplier={1.25} style={styles.cardTitle}>{slide.title}</Text>
           <Text style={styles.cardBody}>{slide.body}</Text>
         </Animated.View>
         <PrimaryButton label={index === SLIDES.length - 1 ? 'Get started' : 'Next'} icon="arrow-forward" onPress={goNext} />

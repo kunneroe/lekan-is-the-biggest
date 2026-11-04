@@ -78,7 +78,7 @@ export function ProfileScreen() {
       <View style={[styles.panel, { paddingTop: insets.top + spacing.lg }]}>
         <GrabitMark size={250} variant="mono" color="rgba(196,240,66,0.09)" style={styles.watermark} />
         <View style={styles.panelTop}>
-          <Text style={styles.panelTitle}>Profile</Text>
+          <Text maxFontSizeMultiplier={1.25} style={styles.panelTitle}>Profile</Text>
           <Pressable
             onPress={() => navigateRoot('Notifications')}
             style={styles.bell}
@@ -91,7 +91,7 @@ export function ProfileScreen() {
         <FadeInUp style={styles.me}>
           <View style={styles.avatarWrap}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarTxt}>{initials(user?.fullName)}</Text>
+              <Text maxFontSizeMultiplier={1.25} style={styles.avatarTxt}>{initials(user?.fullName)}</Text>
             </View>
             <PressableScale
               style={styles.edit}
@@ -103,7 +103,7 @@ export function ProfileScreen() {
             </PressableScale>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.name} numberOfLines={1}>
+            <Text maxFontSizeMultiplier={1.25} style={styles.name} numberOfLines={1}>
               {user?.fullName || 'User'}
             </Text>
             {user?.email ? (

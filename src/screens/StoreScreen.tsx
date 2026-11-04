@@ -189,7 +189,7 @@ export function StoreScreen() {
           <ProductImage uri={getSupermarketImageUrl(store)} style={StyleSheet.absoluteFillObject} label={store.name} />
           <View style={styles.heroScrim} />
           <View style={[styles.heroText, { paddingBottom: spacing.xxl + spacing.xl }]}>
-            <Text style={styles.heroTitle} numberOfLines={2}>
+            <Text maxFontSizeMultiplier={1.25} style={styles.heroTitle} numberOfLines={2}>
               {store.name}
             </Text>
             <View style={styles.heroChips}>
@@ -255,7 +255,7 @@ export function StoreScreen() {
             })}
           </ScrollView>
           <View style={styles.secHead}>
-            <Text style={styles.secTitle}>Products</Text>
+            <Text maxFontSizeMultiplier={1.25} style={styles.secTitle}>Products</Text>
             {productsLoading ? (
               <GrabitLoader size={20} />
             ) : (
@@ -293,7 +293,7 @@ export function StoreScreen() {
       </Animated.ScrollView>
 
       <Animated.View pointerEvents="none" style={[styles.topBar, { height: insets.top + 60, opacity: barBg }]}>
-        <Text style={[styles.topBarTitle, { marginTop: insets.top }]} numberOfLines={1}>
+        <Text maxFontSizeMultiplier={1.25} style={[styles.topBarTitle, { marginTop: insets.top }]} numberOfLines={1}>
           {store.name}
         </Text>
       </Animated.View>
@@ -343,7 +343,7 @@ function ProductCard({
           {getProductCategoryName(product)}
         </Text>
         <View style={styles.priceRow}>
-          <Text style={styles.pPrice}>₦{Number(product.price || 0).toLocaleString()}</Text>
+          <Text maxFontSizeMultiplier={1.25} style={styles.pPrice}>₦{Number(product.price || 0).toLocaleString()}</Text>
           <PressableScale
             scaleTo={0.82}
             hapticFeedback

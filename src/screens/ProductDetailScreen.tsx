@@ -9,6 +9,7 @@ import { CartBubble } from '../components/common/CartBubble';
 import { EmptyState } from '../components/common/EmptyState';
 import { PrimaryButton } from '../components/common/PrimaryButton';
 import { FadeInUp } from '../components/motion/FadeInUp';
+import { AnimatedPrice } from '../components/motion/AnimatedPrice';
 import { PressableScale } from '../components/motion/PressableScale';
 import { ProductImage } from '../components/ProductImage';
 import { measureView, useCartFly } from '../context/CartFlyContext';
@@ -22,6 +23,7 @@ import { brand, colors, fonts, radii, shadows, spacing } from '../theme';
 import { getProductImageUrl } from '../utils/catalogFormat';
 import { haptic } from '../utils/haptics';
 import { parseApiError } from '../utils/parseApiError';
+import { TEXT_CAP, useBarHeight, useLayout } from '../utils/responsive';
 
 type R = RouteProp<RootStackParamList, 'ProductDetail'>;
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -43,6 +45,8 @@ export function ProductDetailScreen() {
   const cartRef = useRef<View>(null);
   const heart = useRef(new Animated.Value(1)).current;
   const qtyPop = useRef(new Animated.Value(1)).current;
+  const [barH, onBarLayout] = useBarHeight(110);
+  const { gutter, s } = useLayout();
 
   useEffect(() => {
     Promise.all([
@@ -111,14 +115,18 @@ export function ProductDetailScreen() {
 
   return (
     <View style={styles.screen}>
-      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 130 }} showsVerticalScrollIndicator={false}>
-        <View style={[styles.imageStage, { paddingTop: insets.top + 64 }]}>
+      <ScrollView contentContainerStyle={{ paddingBottom: barH + spacing.xl }} showsVerticalScrollIndicator={false}>
+        <View style={[styles.imageStage, { paddingTop: insets.top + 64, paddingHorizontal: gutter }]}>
           <View ref={imageRef} collapsable={false} style={styles.imageCard}>
-            <ProductImage uri={getProductImageUrl(product)} style={styles.heroImg} label={product.name} />
+            <ProductImage
+              uri={getProductImageUrl(product)}
+              style={[styles.heroImg, { height: s(260) }]}
+              label={product.name}
+            />
           </View>
         </View>
 
-        <View style={styles.body}>
+        <View style={[styles.body, { paddingHorizontal: gutter }]}>
           <FadeInUp>
             <View style={styles.storeChip}>
               <Ionicons name="storefront" size={14} color={colors.primary} />
@@ -126,9 +134,9 @@ export function ProductDetailScreen() {
                 {store.name}
               </Text>
             </View>
-            <Text style={styles.title}>{product.name}</Text>
+            <Text maxFontSizeMultiplier={1.25} style={styles.title}>{product.name}</Text>
             <View style={styles.priceRow}>
-              <Text style={styles.price}>₦{Number(product.price || 0).toLocaleString()}</Text>
+              <Text maxFontSizeMultiplier={1.25} style={styles.price}>₦{Number(product.price || 0).toLocaleString()}</Text>
               {product.unit ? <Text style={styles.unit}>/ {product.unit}</Text> : null}
             </View>
           </FadeInUp>
@@ -151,7 +159,7 @@ export function ProductDetailScreen() {
                 >
                   <Ionicons name="remove" size={20} color={colors.text} />
                 </PressableScale>
-                <Animated.Text style={[styles.stepNum, { transform: [{ scale: qtyPop }] }]}>{qty}</Animated.Text>
+                <Animated.Text maxFontSizeMultiplier={1.25} style={[styles.stepNum, { transform: [{ scale: qtyPop }] }]}>{qty}</Animated.Text>
                 <PressableScale
                   scaleTo={0.85}
                   style={[styles.stepBtn, styles.stepBtnPlus]}
@@ -167,7 +175,7 @@ export function ProductDetailScreen() {
 
           {product.description ? (
             <FadeInUp index={2}>
-              <Text style={styles.sec}>About this item</Text>
+              <Text maxFontSizeMultiplier={1.25} style={styles.sec}>About this item</Text>
               <Text style={styles.desc}>{product.description}</Text>
             </FadeInUp>
           ) : null}
@@ -205,10 +213,12 @@ export function ProductDetailScreen() {
         </View>
       </View>
 
-      <View style={[styles.bar, { paddingBottom: insets.bottom + spacing.md }]}>
-        <View>
-          <Text style={styles.barLab}>Total</Text>
-          <Text style={styles.barTot}>₦{lineTotal.toLocaleString()}</Text>
+      <View style={[styles.bar, { paddingBottom: insets.bottom + spacing.md, paddingHorizontal: gutter }]} onLayout={onBarLayout}>
+        <View style={styles.barLeft}>
+          <Text style={styles.barLab} maxFontSizeMultiplier={TEXT_CAP.control}>
+            Total
+          </Text>
+          <AnimatedPrice value={lineTotal} style={styles.barTot} fit />
         </View>
         <View style={styles.barBtn}>
           <PrimaryButton
@@ -320,5 +330,6 @@ const styles = StyleSheet.create({
   },
   barLab: { fontFamily: fonts.medium, fontSize: 12, color: colors.textSecondary },
   barTot: { fontFamily: fonts.display, fontSize: 22, letterSpacing: -0.4, color: colors.text },
-  barBtn: { flex: 1, maxWidth: 230 },
+  barLeft: { flexShrink: 1, minWidth: 84 },
+  barBtn: { flexGrow: 1, flexShrink: 0, flexBasis: 160, maxWidth: 240 },
 });

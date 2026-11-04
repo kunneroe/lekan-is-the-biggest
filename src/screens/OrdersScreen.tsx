@@ -81,7 +81,7 @@ export function OrdersScreen() {
     <View style={styles.screen}>
       <View style={[styles.top, { paddingTop: insets.top + spacing.md }]}>
         <View>
-          <Text style={styles.title}>Your orders</Text>
+          <Text maxFontSizeMultiplier={1.25} style={styles.title}>Your orders</Text>
           <Text style={styles.subtitle}>Track, reorder and relive your grabs</Text>
         </View>
         <GrabitMark size={32} />
@@ -156,7 +156,7 @@ export function OrdersScreen() {
             {tab === 'past' && past.length > 0 ? (
               <>
                 <View style={styles.pastHead}>
-                  <Text style={styles.pastTitle}>Recent</Text>
+                  <Text maxFontSizeMultiplier={1.25} style={styles.pastTitle}>Recent</Text>
                   <Pressable onPress={() => navigateRoot('OrderHistory')} hitSlop={8} style={styles.viewAll}>
                     <Text style={styles.viewAllTxt}>View all</Text>
                     <Ionicons name="arrow-forward" size={14} color={colors.primary} />
@@ -195,7 +195,7 @@ function ActiveCard({ order, index }: { order: any; index: number }) {
         <View style={styles.cardTop}>
           <ProductImage uri={firstImage} style={styles.storeThumb} label={storeName} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.storeName} numberOfLines={1}>
+            <Text maxFontSizeMultiplier={1.25} style={styles.storeName} numberOfLines={1}>
               {storeName}
             </Text>
             <Text style={styles.time}>{new Date(displayDate).toLocaleDateString()}</Text>
@@ -208,7 +208,7 @@ function ActiveCard({ order, index }: { order: any; index: number }) {
         <View style={styles.mid}>
           <View>
             <Text style={styles.ot}>Order total</Text>
-            <Text style={styles.op}>₦{displayTotal.toLocaleString()}</Text>
+            <Text maxFontSizeMultiplier={1.25} style={styles.op}>₦{displayTotal.toLocaleString()}</Text>
           </View>
           <Text style={styles.items}>{lines.length} items</Text>
         </View>

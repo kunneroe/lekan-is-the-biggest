@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEffect, useState } from 'react';
 import { LoaderView } from '../components/brand/GrabitLoader';
@@ -24,6 +24,9 @@ export function OrderSuccessScreen() {
   const { orderId } = route.params;
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { width } = useWindowDimensions();
+  // the celebration stage is 300pt wide: shrink it on narrow phones so nothing is cut
+  const bagScale = Math.min(1, (width - spacing.xl * 2) / 300);
 
   useEffect(() => {
     orderService
@@ -59,12 +62,12 @@ export function OrderSuccessScreen() {
       contentContainerStyle={{ paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.xl, paddingHorizontal: spacing.xl }}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.stage}>
+      <View style={[styles.stage, { transform: [{ scale: bagScale }], marginBottom: spacing.lg - 280 * (1 - bagScale) }]}>
         <BagCelebration />
       </View>
 
       <FadeInUp delay={REVEAL}>
-        <Text style={styles.title}>Order grabbed!</Text>
+        <Text maxFontSizeMultiplier={1.25} style={styles.title}>Order grabbed!</Text>
         <Text style={styles.sub}>
           {storeShort ? (
             <>
@@ -84,7 +87,7 @@ export function OrderSuccessScreen() {
             <Text style={styles.oid} numberOfLines={1}>
               Order #{order.id}
             </Text>
-            <Text style={styles.sum}>
+            <Text maxFontSizeMultiplier={1.25} style={styles.sum}>
               {lines.length} items · ₦{Number(order.total || order.totalAmount || 0).toLocaleString()}
             </Text>
             <View style={styles.etaRow}>

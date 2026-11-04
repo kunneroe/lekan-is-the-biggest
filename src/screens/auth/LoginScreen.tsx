@@ -61,7 +61,7 @@ export function LoginScreen({ navigation }: Props) {
           <ImageBackground source={{ uri: PROMO_URI }} style={styles.promo} imageStyle={styles.promoImg}>
             <View style={styles.promoTint}>
               <View style={styles.promoDot} />
-              <Text style={styles.promoTxt}>Market-fresh quality delivered to your doorstep in minutes.</Text>
+              <Text maxFontSizeMultiplier={1.25} style={styles.promoTxt}>Market-fresh quality delivered to your doorstep in minutes.</Text>
             </View>
           </ImageBackground>
           <Text style={styles.legal}>© Grabit · Lagos, Nigeria</Text>

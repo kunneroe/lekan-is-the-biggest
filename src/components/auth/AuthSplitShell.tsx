@@ -52,7 +52,7 @@ export function AuthSplitShell({ title, subtitle, children, belowCard, onBack }:
             <GrabitLogo size={26} tone="dark" />
           </FadeInUp>
           <FadeInUp index={1}>
-            <Text style={styles.screenTitle}>{title}</Text>
+            <Text maxFontSizeMultiplier={1.25} style={styles.screenTitle}>{title}</Text>
             <Text style={styles.screenSub}>{subtitle}</Text>
           </FadeInUp>
         </View>

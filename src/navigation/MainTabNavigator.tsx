@@ -119,11 +119,19 @@ function TabItem({
           <Ionicons name={focused ? on : off} size={24} color={focused ? colors.primary : colors.textSecondary} />
           {badge > 0 ? (
             <Animated.View style={[styles.badge, { transform: [{ scale: badgePop }] }]}>
-              <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
+              <Text style={styles.badgeText} maxFontSizeMultiplier={1}>
+                {badge > 99 ? '99+' : badge}
+              </Text>
             </Animated.View>
           ) : null}
         </Animated.View>
-        <Text style={[styles.tabLabel, { color: focused ? colors.primary : colors.textSecondary }]}>{label}</Text>
+        <Text
+          style={[styles.tabLabel, { color: focused ? colors.primary : colors.textSecondary }]}
+          numberOfLines={1}
+          maxFontSizeMultiplier={1.2}
+        >
+          {label}
+        </Text>
       </View>
     </Pressable>
   );
@@ -213,7 +221,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacing.sm,
-    minWidth: 76,
+    alignSelf: 'stretch',
+    marginHorizontal: 2,
     minHeight: 54,
   },
   pill: {

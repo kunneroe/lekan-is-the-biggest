@@ -58,7 +58,7 @@ export function EmptyState({ art = 'bag', title, body, actionLabel, onAction, st
           )}
         </Animated.View>
       </View>
-      <Text style={styles.title}>{title}</Text>
+      <Text maxFontSizeMultiplier={1.25} style={styles.title}>{title}</Text>
       {body ? <Text style={styles.body}>{body}</Text> : null}
       {actionLabel && onAction ? (
         <PressableScale onPress={onAction} style={styles.btn} hapticFeedback accessibilityRole="button">

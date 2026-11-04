@@ -49,7 +49,7 @@ export function BottomSheet({ visible, onClose, onShow, title, children }: Props
           ]}
         >
           <View style={styles.handle} />
-          {title ? <Text style={styles.title}>{title}</Text> : null}
+          {title ? <Text maxFontSizeMultiplier={1.25} style={styles.title}>{title}</Text> : null}
           {children}
         </Animated.View>
       </View>

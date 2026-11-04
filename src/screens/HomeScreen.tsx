@@ -1,22 +1,31 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Alert,
+  Animated,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GrabitLoader } from '../components/brand/GrabitLoader';
+import { GrabitLogo } from '../components/brand/GrabitWordmark';
 import { BottomSheet } from '../components/common/BottomSheet';
-import { EmptyState } from '../components/common/EmptyState';
 import { PrimaryButton } from '../components/common/PrimaryButton';
 import { CategoryPillGrid } from '../components/home/CategoryPillGrid';
 import { HomeHeader } from '../components/home/HomeHeader';
 import { HomeSearchBar } from '../components/home/HomeSearchBar';
 import { PromoBannerCarousel } from '../components/home/PromoBannerCarousel';
 import { SectionHeader } from '../components/home/SectionHeader';
-import { SupermarketListCard } from '../components/home/SupermarketListCard';
+import { StoreSection } from '../components/home/StoreSection';
 import { FilterPanelModal, DEFAULT_FILTERS, type FilterState } from '../components/home/FilterPanelModal';
-import { FadeInUp } from '../components/motion/FadeInUp';
-import { StoreCardSkeleton } from '../components/motion/Skeleton';
 import { useAddresses } from '../context/AddressContext';
 import { categoryService } from '../services/categoryService';
 import { supermarketService } from '../services/supermarketService';
@@ -26,8 +35,11 @@ import { formatAddressLabel, formatAddressLine, formatAddressShortLine } from '.
 import { toCategoryGridItems, type ApiCategory } from '../utils/catalogFormat';
 import { haptic } from '../utils/haptics';
 import { parseApiError } from '../utils/parseApiError';
+import { useLayout } from '../utils/responsive';
 
 const TAB_BAR_EXTRA = 72;
+/** scroll offset at which the compact header is fully shown */
+const MINI_AT = 300;
 
 function greetingForNow() {
   const h = new Date().getHours();
@@ -56,6 +68,11 @@ export function HomeScreen() {
   const [supermarkets, setSupermarkets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { gutter } = useLayout();
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const scrollRef = useRef<ScrollView>(null);
+  const [miniVisible, setMiniVisible] = useState(false);
+  const miniRef = useRef(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -161,9 +178,21 @@ export function HomeScreen() {
   return (
     <View style={styles.screen}>
       {isFocused ? <StatusBar style="light" /> : null}
-      <ScrollView
+      <Animated.ScrollView
+        ref={scrollRef}
         contentContainerStyle={{ paddingBottom: insets.bottom + TAB_BAR_EXTRA + spacing.xl }}
         showsVerticalScrollIndicator={false}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+          useNativeDriver: true,
+          listener: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+            const show = e.nativeEvent.contentOffset.y > MINI_AT - 30;
+            if (show !== miniRef.current) {
+              miniRef.current = show;
+              setMiniVisible(show);
+            }
+          },
+        })}
+        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -188,7 +217,7 @@ export function HomeScreen() {
           />
         </HomeHeader>
 
-        <View style={styles.body}>
+        <View style={[styles.body, { paddingHorizontal: gutter }]}>
           <PromoBannerCarousel />
 
           {categories.length > 0 ? (
@@ -206,32 +235,63 @@ export function HomeScreen() {
             </>
           ) : null}
 
-          <SectionHeader
-            title="Supermarkets near you"
-            actionLabel="View all"
-            onPressAction={() => navigateRoot('AllSupermarkets')}
-            accessory={refreshing ? <GrabitLoader size={20} /> : null}
+          <StoreSection
+            stores={filteredSupermarkets}
+            allStores={supermarkets}
+            loading={loading}
+            refreshing={refreshing}
+            filters={filters}
+            onChangeFilters={setFilters}
+            onClearFilters={() => setFilters(DEFAULT_FILTERS)}
+            onOpenStore={(id) => openStore(id)}
+            onSeeAll={() => navigateRoot('AllSupermarkets')}
           />
-
-          {loading ? (
-            [0, 1, 2].map((i) => <StoreCardSkeleton key={i} index={i} />)
-          ) : filteredSupermarkets.length === 0 ? (
-            <EmptyState
-              art="search"
-              title="No stores match your filters"
-              body="Try adjusting or clearing your filters to see more stores."
-              actionLabel="Clear filters"
-              onAction={() => setFilters(DEFAULT_FILTERS)}
-            />
-          ) : (
-            filteredSupermarkets.map((store, i) => (
-              <FadeInUp key={store.id} index={i}>
-                <SupermarketListCard store={store} onPress={() => openStore(store.id)} />
-              </FadeInUp>
-            ))
-          )}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
+
+      {/* Compact bar that slides in once the big green header has scrolled away */}
+      <Animated.View
+        pointerEvents={miniVisible ? 'auto' : 'none'}
+        style={[
+          styles.mini,
+          {
+            paddingTop: insets.top + spacing.sm,
+            paddingHorizontal: gutter,
+            opacity: scrollY.interpolate({ inputRange: [MINI_AT - 60, MINI_AT], outputRange: [0, 1], extrapolate: 'clamp' }),
+            transform: [
+              {
+                translateY: scrollY.interpolate({ inputRange: [MINI_AT - 60, MINI_AT], outputRange: [-16, 0], extrapolate: 'clamp' }),
+              },
+            ],
+          },
+        ]}
+      >
+        <GrabitLogo size={18} tone="dark" />
+        <View style={styles.miniRight}>
+          <Pressable
+            onPress={() => setAddrOpen(true)}
+            style={styles.miniAddr}
+            accessibilityRole="button"
+            accessibilityLabel={`Deliver to ${deliveryLine}`}
+          >
+            <Ionicons name="location" size={14} color={brand.lime} />
+            <Text style={styles.miniAddrTxt} numberOfLines={1} maxFontSizeMultiplier={1.2}>
+              {deliveryLine}
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              haptic.tap();
+              scrollRef.current?.scrollTo({ y: 0, animated: true });
+            }}
+            style={styles.miniBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Back to top and search"
+          >
+            <Ionicons name="search" size={18} color={brand.oat} />
+          </Pressable>
+        </View>
+      </Animated.View>
 
       <BottomSheet visible={addrOpen} onClose={() => setAddrOpen(false)} title="Deliver to">
         {addressesLoading ? (
@@ -306,7 +366,42 @@ export function HomeScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  body: { paddingHorizontal: spacing.xl },
+  body: {},
+  mini: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    paddingBottom: spacing.md,
+    backgroundColor: brand.basil,
+    borderBottomLeftRadius: radii.xl,
+    borderBottomRightRadius: radii.xl,
+  },
+  miniRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
+  miniAddr: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flexShrink: 1,
+    maxWidth: 170,
+    backgroundColor: 'rgba(255,246,230,0.14)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+    borderRadius: radii.pill,
+  },
+  miniAddrTxt: { fontFamily: fonts.semibold, fontSize: 13, color: brand.oat, flexShrink: 1 },
+  miniBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,246,230,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   sectionSpacer: { height: spacing.xxl },
   sheetLoading: { paddingVertical: spacing.xl, alignItems: 'center' },
   emptyWrap: { alignItems: 'center', paddingVertical: spacing.md, gap: spacing.lg },

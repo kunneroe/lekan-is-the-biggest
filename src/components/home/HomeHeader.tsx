@@ -53,7 +53,7 @@ export function HomeHeader({ greeting, deliveryLine, onPressDelivery, onPressNot
       </Pressable>
 
       <Text style={styles.greeting}>{greeting}</Text>
-      <Text style={styles.headline}>What are we grabbing today?</Text>
+      <Text maxFontSizeMultiplier={1.25} style={styles.headline}>What are we grabbing today?</Text>
 
       {children ? <View style={styles.search}>{children}</View> : null}
     </View>

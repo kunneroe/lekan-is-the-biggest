@@ -45,11 +45,15 @@ export function PrimaryButton({
       {loading ? (
         <View style={styles.row}>
           <GrabitLoader size={22} variant={variant === 'secondary' ? 'color' : 'reverse'} />
-          <Text style={[styles.label, { color: fg }]}>{label}</Text>
+          <Text style={[styles.label, styles.shrink, { color: fg }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} maxFontSizeMultiplier={1.3}>
+            {label}
+          </Text>
         </View>
       ) : (
         <View style={styles.row}>
-          <Text style={[styles.label, { color: fg }]}>{label}</Text>
+          <Text style={[styles.label, styles.shrink, { color: fg }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} maxFontSizeMultiplier={1.3}>
+            {label}
+          </Text>
           {icon ? <Ionicons name={icon} size={20} color={fg} /> : null}
         </View>
       )}
@@ -74,7 +78,8 @@ const styles = StyleSheet.create({
     borderColor: colors.mintStrong,
   },
   dark: { backgroundColor: brand.forest },
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, maxWidth: '100%' },
   label: { fontFamily: fonts.bold, fontSize: 16 },
+  shrink: { flexShrink: 1 },
   disabled: { opacity: 0.5 },
 });

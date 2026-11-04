@@ -1,8 +1,10 @@
-import { useRef } from 'react';
-import { Alert, Animated, Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { brand, fonts, radii, spacing } from '../../theme';
 import { GrabitMark } from '../brand/GrabitMark';
 import { PressableScale } from '../motion/PressableScale';
+import { useReducedMotion } from '../../utils/motion';
+import { useLayout } from '../../utils/responsive';
 
 type Banner = {
   id: string;
@@ -56,67 +58,149 @@ const BANNERS: Banner[] = [
   },
 ];
 
+const AUTO_MS = 4500;
+
+/**
+ * Promo banners: swipe or let them auto-advance. The active dot fills like a story
+ * progress bar; touching the carousel pauses it. Cards behind the centre one sit back
+ * and their photos drift, so swiping feels layered.
+ */
 export function PromoBannerCarousel() {
-  const { width } = useWindowDimensions();
-  const cardW = Math.min(width - 56, 360);
+  const { width, gutter } = useLayout();
+  const reduced = useReducedMotion();
+  const cardW = Math.min(width - gutter * 2 - 16, 360);
   const gap = spacing.md;
+  const step = cardW + gap;
   const scrollX = useRef(new Animated.Value(0)).current;
+  const progress = useRef(new Animated.Value(0)).current;
+  const listRef = useRef<ScrollView>(null);
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    if (paused || reduced) return;
+    progress.setValue(0);
+    const run = Animated.timing(progress, { toValue: 1, duration: AUTO_MS, useNativeDriver: true });
+    run.start(({ finished }) => {
+      if (!finished) return;
+      const next = (index + 1) % BANNERS.length;
+      listRef.current?.scrollTo({ x: next * step, animated: true });
+      setIndex(next);
+    });
+    return () => run.stop();
+  }, [index, paused, reduced, progress, step]);
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, { marginHorizontal: -gutter }]}>
       <Animated.ScrollView
+        ref={listRef}
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: spacing.xl, gap }}
+        contentContainerStyle={{ paddingHorizontal: gutter, gap }}
         decelerationRate="fast"
-        snapToInterval={cardW + gap}
+        snapToInterval={step}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], { useNativeDriver: true })}
+        onScrollBeginDrag={() => setPaused(true)}
+        onMomentumScrollEnd={(e) => {
+          const i = Math.max(0, Math.min(BANNERS.length - 1, Math.round(e.nativeEvent.contentOffset.x / step)));
+          setIndex(i);
+          setPaused(false);
+        }}
         scrollEventThrottle={16}
       >
-        {BANNERS.map((b) => (
-          <View key={b.id} style={[styles.card, { width: cardW, backgroundColor: b.bg }]}>
-            <GrabitMark size={190} variant="mono" color={b.mark} style={styles.mark} />
-            <View style={styles.textCol}>
-              <Text style={[styles.title, { color: b.fg }]}>{b.title}</Text>
-              <Text style={[styles.subtitle, { color: b.fg }]}>{b.subtitle}</Text>
-              <PressableScale
-                hapticFeedback
-                onPress={() => Alert.alert(b.cta, 'Promo applied to your next order (demo).')}
-                style={[styles.cta, { backgroundColor: b.ctaBg }]}
-                accessibilityRole="button"
-              >
-                <Text style={[styles.ctaText, { color: b.ctaFg }]}>{b.cta}</Text>
-              </PressableScale>
-            </View>
-            <Image source={{ uri: b.image }} style={styles.image} />
-          </View>
-        ))}
-      </Animated.ScrollView>
-      <View style={styles.dots}>
         {BANNERS.map((b, i) => {
-          const input = [(i - 1) * (cardW + gap), i * (cardW + gap), (i + 1) * (cardW + gap)];
+          const input = [(i - 1) * step, i * step, (i + 1) * step];
           return (
             <Animated.View
               key={b.id}
               style={[
-                styles.dot,
+                styles.card,
                 {
-                  opacity: scrollX.interpolate({ inputRange: input, outputRange: [0.3, 1, 0.3], extrapolate: 'clamp' }),
-                  transform: [
-                    { scaleX: scrollX.interpolate({ inputRange: input, outputRange: [1, 2.6, 1], extrapolate: 'clamp' }) },
-                  ],
+                  width: cardW,
+                  backgroundColor: b.bg,
+                  transform: [{ scale: scrollX.interpolate({ inputRange: input, outputRange: [0.94, 1, 0.94], extrapolate: 'clamp' }) }],
                 },
               ]}
-            />
+            >
+              <Animated.View
+                style={[
+                  styles.mark,
+                  {
+                    transform: [
+                      { rotate: scrollX.interpolate({ inputRange: input, outputRange: ['-25deg', '0deg', '25deg'], extrapolate: 'clamp' }) },
+                    ],
+                  },
+                ]}
+              >
+                <GrabitMark size={190} variant="mono" color={b.mark} />
+              </Animated.View>
+              <View style={styles.textCol}>
+                <Text maxFontSizeMultiplier={1.25} style={[styles.title, { color: b.fg }]}>{b.title}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, { color: b.fg }]}>{b.subtitle}</Text>
+                <PressableScale
+                  hapticFeedback
+                  onPress={() => Alert.alert(b.cta, 'Promo applied to your next order (demo).')}
+                  style={[styles.cta, { backgroundColor: b.ctaBg }]}
+                  accessibilityRole="button"
+                >
+                  <Text maxFontSizeMultiplier={1.25} style={[styles.ctaText, { color: b.ctaFg }]}>{b.cta}</Text>
+                </PressableScale>
+              </View>
+              <Animated.Image
+                source={{ uri: b.image }}
+                style={[
+                  styles.image,
+                  {
+                    transform: [
+                      { translateX: scrollX.interpolate({ inputRange: input, outputRange: [-24, 0, 24], extrapolate: 'clamp' }) },
+                      { rotate: scrollX.interpolate({ inputRange: input, outputRange: ['-12deg', '0deg', '12deg'], extrapolate: 'clamp' }) },
+                    ],
+                  },
+                ]}
+              />
+            </Animated.View>
           );
         })}
+      </Animated.ScrollView>
+      <View style={styles.dots}>
+        {BANNERS.map((b, i) =>
+          i === index ? (
+            <View key={b.id} style={styles.track}>
+              <Animated.View
+                style={[
+                  styles.fill,
+                  {
+                    transform: [
+                      { translateX: progress.interpolate({ inputRange: [0, 1], outputRange: [-TRACK_W, 0] }) },
+                    ],
+                  },
+                  (paused || reduced) && { transform: [{ translateX: 0 }] },
+                ]}
+              />
+            </View>
+          ) : (
+            <Pressable
+              key={b.id}
+              hitSlop={8}
+              accessibilityLabel={`Show promo ${i + 1}`}
+              onPress={() => {
+                listRef.current?.scrollTo({ x: i * step, animated: true });
+                setIndex(i);
+              }}
+            >
+              <View style={styles.dot} />
+            </Pressable>
+          ),
+        )}
       </View>
     </View>
   );
 }
 
+const TRACK_W = 26;
+
 const styles = StyleSheet.create({
-  wrap: { marginHorizontal: -spacing.xl, marginBottom: spacing.xl },
+  wrap: { marginBottom: spacing.xl },
   card: {
     minHeight: 160,
     borderRadius: radii.xl,
@@ -138,6 +222,8 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: 'rgba(255,255,255,0.85)',
   },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: spacing.md },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: brand.basil },
+  dots: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: spacing.md },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: brand.basil, opacity: 0.3 },
+  track: { width: TRACK_W, height: 6, borderRadius: 3, backgroundColor: 'rgba(14,124,74,0.22)', overflow: 'hidden' },
+  fill: { width: TRACK_W, height: 6, borderRadius: 3, backgroundColor: brand.basil },
 });

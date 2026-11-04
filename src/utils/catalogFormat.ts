@@ -164,6 +164,7 @@ export function toCategoryGridItems(categories: ApiCategory[]) {
   return categories.map((cat) => ({
     id: cat.id,
     name: cat.name,
+    slug: cat.slug,
     icon: getCategoryIcon(cat.slug),
     color: getCategoryColor(cat.slug),
   }));
