@@ -5,12 +5,13 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
-import { Alert } from 'react-native';
 import { authService } from '../services/authService';
 import { setLogoutHandler } from '../services/api';
 
+import { appAlert } from './DialogContext';
 type User = any; // Can be defined strictly later
 
 type AuthContextValue = {
@@ -29,13 +30,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [user, setUser] = useState<User | null>(null);
 
+  // Mirrors isSignedIn for callbacks that must not re-create on every change.
+  const signedInRef = useRef(false);
+  useEffect(() => {
+    signedInRef.current = isSignedIn;
+  }, [isSignedIn]);
+
   const signOut = useCallback(async (showAlert = false) => {
+    const wasSignedIn = signedInRef.current;
     await AsyncStorage.removeItem('userToken');
+    await AsyncStorage.removeItem('refreshToken');
     await AsyncStorage.removeItem('userData');
     setIsSignedIn(false);
     setUser(null);
-    if (showAlert === true) {
-      Alert.alert('Session Expired', 'Please login again.');
+    // Only someone who was actually logged in can have a session expire. A wrong
+    // password on the login screen also lands here (via the request layer's 401
+    // handling) and must not show this.
+    if (showAlert === true && wasSignedIn) {
+      appAlert('Session expired', 'For your security, please log in again.');
     }
   }, []);
 
@@ -94,9 +106,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback(async (email: string, password: string) => {
     const data = await authService.login({ identifier: email, password });
-    const { user, accessToken } = data;
+    const { user, accessToken, refreshToken } = data;
 
     if (accessToken) await AsyncStorage.setItem('userToken', accessToken);
+    if (refreshToken) await AsyncStorage.setItem('refreshToken', refreshToken);
     if (user) await AsyncStorage.setItem('userData', JSON.stringify(user));
 
     setUser(user);
@@ -105,9 +118,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const registerUser = useCallback(async (userData: any) => {
     const data = await authService.register(userData);
-    const { user, accessToken } = data;
+    const { user, accessToken, refreshToken } = data;
 
     if (accessToken) await AsyncStorage.setItem('userToken', accessToken);
+    if (refreshToken) await AsyncStorage.setItem('refreshToken', refreshToken);
     if (user) await AsyncStorage.setItem('userData', JSON.stringify(user));
 
     setUser(user);

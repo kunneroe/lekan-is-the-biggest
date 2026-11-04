@@ -1,26 +1,31 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useEffect, useRef, useState } from 'react';
+import { LoaderView } from '../components/brand/GrabitLoader';
+import { CartBubble } from '../components/common/CartBubble';
+import { EmptyState } from '../components/common/EmptyState';
+import { PrimaryButton } from '../components/common/PrimaryButton';
+import { FadeInUp } from '../components/motion/FadeInUp';
+import { AnimatedPrice } from '../components/motion/AnimatedPrice';
+import { PressableScale } from '../components/motion/PressableScale';
 import { ProductImage } from '../components/ProductImage';
-import { useEffect, useState } from 'react';
-import { supermarketService } from '../services/supermarketService';
-import { productService } from '../services/productService';
-import { cartService } from '../services/cartService';
+import { measureView, useCartFly } from '../context/CartFlyContext';
+import { useFavorites } from '../context/FavoriteContext';
+import { showToast } from '../context/ToastContext';
 import type { RootStackParamList } from '../navigation/navigationRef';
-import { colors, radii, shadows, spacing } from '../theme';
+import { cartService } from '../services/cartService';
+import { productService } from '../services/productService';
+import { supermarketService } from '../services/supermarketService';
+import { brand, colors, fonts, radii, shadows, spacing } from '../theme';
 import { getProductImageUrl } from '../utils/catalogFormat';
+import { haptic } from '../utils/haptics';
 import { parseApiError } from '../utils/parseApiError';
+import { TEXT_CAP, useBarHeight, useLayout } from '../utils/responsive';
 
+import { appAlert } from '../context/DialogContext';
 type R = RouteProp<RootStackParamList, 'ProductDetail'>;
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -29,18 +34,25 @@ export function ProductDetailScreen() {
   const route = useRoute<R>();
   const navigation = useNavigation<Nav>();
   const { storeId, productId } = route.params;
-  const favoriteIds = new Set();
-  const toggleFavorite = () => Alert.alert('Favorites', 'Mock favorites list.');
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const { fly } = useCartFly();
   const [qty, setQty] = useState(1);
   const [store, setStore] = useState<any>(null);
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [landSignal, setLandSignal] = useState(0);
+  const imageRef = useRef<View>(null);
+  const cartRef = useRef<View>(null);
+  const heart = useRef(new Animated.Value(1)).current;
+  const qtyPop = useRef(new Animated.Value(1)).current;
+  const [barH, onBarLayout] = useBarHeight(110);
+  const { gutter, s } = useLayout();
 
   useEffect(() => {
     Promise.all([
       supermarketService.getSupermarketById(storeId).catch(() => null),
-      productService.getProductById(productId).catch(() => null)
+      productService.getProductById(productId).catch(() => null),
     ]).then(([sRes, pRes]) => {
       if (sRes) setStore(sRes.supermarket || sRes);
       if (pRes) setProduct(pRes.product || pRes);
@@ -48,161 +60,176 @@ export function ProductDetailScreen() {
     });
   }, [storeId, productId]);
 
+  const bumpQty = (next: number) => {
+    haptic.select();
+    setQty(next);
+    qtyPop.setValue(0.7);
+    Animated.spring(qtyPop, { toValue: 1, friction: 4, tension: 220, useNativeDriver: true }).start();
+  };
+
   if (loading) {
-    return (
-      <View style={styles.miss}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
+    return <LoaderView />;
   }
 
   if (!store || !product) {
     return (
-      <View style={styles.miss}>
-        <Text>Product not found.</Text>
+      <View style={[styles.screen, { paddingTop: insets.top + spacing.xxl }]}>
+        <EmptyState art="search" title="Product not found" actionLabel="Go back" onAction={() => navigation.goBack()} />
       </View>
     );
   }
 
+  const fav = isFavorite(product.id);
   const lineTotal = Number(product.price || 0) * qty;
-  const related: any[] = []; // related is removed for now or handled by api
+
+  const onToggleFavorite = () => {
+    haptic.tap();
+    heart.setValue(0.6);
+    Animated.spring(heart, { toValue: 1, friction: 3, tension: 200, useNativeDriver: true }).start();
+    toggleFavorite(product.id);
+  };
+
+  const onAdd = async () => {
+    if (adding) return;
+    setAdding(true);
+    try {
+      await cartService.addItem(productId, qty);
+      fly(await measureView(imageRef), getProductImageUrl(product), {
+        to: await measureView(cartRef),
+        onLand: () => setLandSignal((n) => n + 1),
+      });
+      showToast(`${qty} × ${product.name} added`, {
+        action: { label: 'View cart', onPress: () => navigation.navigate('MainTabs', { screen: 'Cart' }) },
+      });
+    } catch (error: unknown) {
+      haptic.error();
+      appAlert(
+        'Unable to Add to Cart',
+        parseApiError(error, {
+          fallback: 'Failed to add item to cart. Make sure you only add items from one supermarket.',
+        }),
+      );
+    } finally {
+      setAdding(false);
+    }
+  };
 
   return (
     <View style={styles.screen}>
+      <ScrollView contentContainerStyle={{ paddingBottom: barH + spacing.xl }} showsVerticalScrollIndicator={false}>
+        <View style={[styles.imageStage, { paddingTop: insets.top + 64, paddingHorizontal: gutter }]}>
+          <View ref={imageRef} collapsable={false} style={styles.imageCard}>
+            <ProductImage
+              uri={getProductImageUrl(product)}
+              style={[styles.heroImg, { height: s(260) }]}
+              label={product.name}
+            />
+          </View>
+        </View>
+
+        <View style={[styles.body, { paddingHorizontal: gutter }]}>
+          <FadeInUp>
+            <View style={styles.storeChip}>
+              <Ionicons name="storefront" size={14} color={colors.primary} />
+              <Text style={styles.storeName} numberOfLines={1}>
+                {store.name}
+              </Text>
+            </View>
+            <Text maxFontSizeMultiplier={1.25} style={styles.title}>{product.name}</Text>
+            <View style={styles.priceRow}>
+              <Text maxFontSizeMultiplier={1.25} style={styles.price}>₦{Number(product.price || 0).toLocaleString()}</Text>
+              {product.unit ? <Text style={styles.unit}>/ {product.unit}</Text> : null}
+            </View>
+          </FadeInUp>
+
+          <FadeInUp index={1}>
+            <View style={styles.stepRow}>
+              <View>
+                <Text style={styles.stepLab}>Quantity</Text>
+                <Text style={styles.stepVal}>
+                  {qty} × {product.unit || 'item'}
+                </Text>
+              </View>
+              <View style={styles.stepper}>
+                <PressableScale
+                  scaleTo={0.85}
+                  style={styles.stepBtn}
+                  onPress={() => bumpQty(Math.max(1, qty - 1))}
+                  accessibilityRole="button"
+                  accessibilityLabel="Decrease quantity"
+                >
+                  <Ionicons name="remove" size={20} color={colors.text} />
+                </PressableScale>
+                <Animated.Text maxFontSizeMultiplier={1.25} style={[styles.stepNum, { transform: [{ scale: qtyPop }] }]}>{qty}</Animated.Text>
+                <PressableScale
+                  scaleTo={0.85}
+                  style={[styles.stepBtn, styles.stepBtnPlus]}
+                  onPress={() => bumpQty(qty + 1)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Increase quantity"
+                >
+                  <Ionicons name="add" size={20} color={colors.surface} />
+                </PressableScale>
+              </View>
+            </View>
+          </FadeInUp>
+
+          {product.description ? (
+            <FadeInUp index={2}>
+              <Text maxFontSizeMultiplier={1.25} style={styles.sec}>About this item</Text>
+              <Text style={styles.desc}>{product.description}</Text>
+            </FadeInUp>
+          ) : null}
+        </View>
+      </ScrollView>
+
       <View style={[styles.top, { paddingTop: insets.top + spacing.sm }]}>
-        <Pressable style={styles.iconCircle} onPress={() => navigation.goBack()}>
+        <PressableScale style={styles.iconCircle} onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Back">
           <Ionicons name="arrow-back" size={22} color={colors.text} />
-        </Pressable>
+        </PressableScale>
         <View style={styles.topRight}>
-          <Pressable
+          <PressableScale
             style={styles.iconCircle}
-            onPress={() => Alert.alert('Share', 'Share sheet (mock).')}
+            onPress={() => appAlert('Share', 'Share sheet (mock).')}
+            accessibilityRole="button"
+            accessibilityLabel="Share"
           >
             <Ionicons name="share-outline" size={20} color={colors.text} />
-          </Pressable>
+          </PressableScale>
           <Pressable
             style={styles.iconCircle}
-            onPress={() => toggleFavorite(product.id)}
+            onPress={onToggleFavorite}
+            accessibilityRole="button"
+            accessibilityLabel={fav ? 'Remove from favorites' : 'Add to favorites'}
           >
-            <Ionicons
-              name={favoriteIds.has(product.id) ? 'heart' : 'heart-outline'}
-              size={20}
-              color={
-                favoriteIds.has(product.id) ? colors.danger : colors.text
-              }
-            />
+            <Animated.View style={{ transform: [{ scale: heart }] }}>
+              <Ionicons name={fav ? 'heart' : 'heart-outline'} size={21} color={fav ? brand.butter : colors.text} />
+            </Animated.View>
           </Pressable>
-        </View>
-      </View>
-      <ScrollView
-        contentContainerStyle={{
-          paddingBottom: insets.bottom + 120,
-          paddingHorizontal: spacing.xl,
-        }}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.imgCard}>
-          <ProductImage
-            uri={getProductImageUrl(product)}
-            style={styles.heroImg}
-            label={product.name}
+          <CartBubble
+            ref={cartRef}
+            landSignal={landSignal}
+            onPress={() => navigation.navigate('MainTabs', { screen: 'Cart' })}
           />
         </View>
-        <Text style={styles.storeLine}>
-          ● {store.name}
-        </Text>
-        <Text style={styles.title}>{product.name}</Text>
-        <Text style={styles.price}>₦{Number(product.price || 0).toLocaleString()}</Text>
-        <View style={styles.stepRow}>
-          <View>
-            <Text style={styles.stepLab}>Total quantity</Text>
-            <Text style={styles.stepVal}>
-              {qty} × {product.unit}
-            </Text>
-          </View>
-          <View style={styles.stepper}>
-            <Pressable
-              style={styles.stepBtn}
-              onPress={() => setQty((q) => Math.max(1, q - 1))}
-            >
-              <Text style={styles.stepBtnTxt}>−</Text>
-            </Pressable>
-            <Text style={styles.stepNum}>{qty}</Text>
-            <Pressable
-              style={[styles.stepBtn, styles.stepBtnPlus]}
-              onPress={() => setQty((q) => q + 1)}
-            >
-              <Text style={[styles.stepBtnTxt, { color: colors.surface }]}>+</Text>
-            </Pressable>
-          </View>
-        </View>
-        <Text style={styles.sec}>Description</Text>
-        <Text style={styles.desc}>{product.description}</Text>
-        <Text style={styles.sec}>More from this store</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {related.map((p) => (
-            <Pressable
-              key={p.id}
-              style={styles.rel}
-              onPress={() =>
-                navigation.replace('ProductDetail', {
-                  storeId,
-                  productId: p.id,
-                })
-              }
-            >
-              <ProductImage
-                uri={getProductImageUrl(p)}
-                style={styles.relImg}
-                label={p.name}
-              />
-              <Text numberOfLines={1} style={styles.relName}>
-                {p.name}
-              </Text>
-              <Text style={styles.relPrice}>₦{Number(p.price || 0).toLocaleString()}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      </ScrollView>
-      <View style={[styles.bar, { paddingBottom: insets.bottom + spacing.md }]}>
-        <View>
-          <Text style={styles.barLab}>Total</Text>
-          <Text style={styles.barTot}>₦{lineTotal.toLocaleString()}</Text>
-        </View>
-        <Pressable
-          style={[styles.barBtn, adding && { opacity: 0.8 }]}
-          disabled={adding}
-          onPress={async () => {
-            if (adding) return;
-            setAdding(true);
-            try {
-              await cartService.addItem(productId, qty);
-              Alert.alert('Success', 'Added to cart!', [
-                { text: 'Continue shopping', style: 'cancel', onPress: () => navigation.goBack() },
-                { text: 'View cart', onPress: () => navigation.navigate('Cart' as never) }
-              ]);
-            } catch (error: unknown) {
-              Alert.alert(
-                'Unable to Add to Cart',
-                parseApiError(error, {
-                  fallback:
-                    'Failed to add item to cart. Make sure you only add items from one supermarket.',
-                }),
-              );
-            } finally {
-              setAdding(false);
-            }
-          }}
-        >
-          {adding ? (
-            <ActivityIndicator size="small" color={colors.surface} />
-          ) : (
-            <Ionicons name="bag-handle-outline" size={20} color={colors.surface} />
-          )}
-          <Text style={styles.barBtnTxt}>
-            Add to cart – ₦{lineTotal.toLocaleString()}
+      </View>
+
+      <View style={[styles.bar, { paddingBottom: insets.bottom + spacing.md, paddingHorizontal: gutter }]} onLayout={onBarLayout}>
+        <View style={styles.barLeft}>
+          <Text style={styles.barLab} maxFontSizeMultiplier={TEXT_CAP.control}>
+            Total
           </Text>
-        </Pressable>
+          <AnimatedPrice value={lineTotal} style={styles.barTot} fit />
+        </View>
+        <View style={styles.barBtn}>
+          <PrimaryButton
+            label={adding ? 'Adding…' : 'Add to cart'}
+            icon="bag-add"
+            loading={adding}
+            disabled={adding}
+            onPress={onAdd}
+          />
+        </View>
       </View>
     </View>
   );
@@ -210,98 +237,82 @@ export function ProductDetailScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  miss: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  imageStage: {
+    backgroundColor: colors.sand,
+    borderBottomLeftRadius: radii.xxl,
+    borderBottomRightRadius: radii.xxl,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xl,
+  },
+  imageCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.xxl,
+    padding: spacing.md,
+    ...shadows.card,
+  },
+  heroImg: { width: '100%', height: 260, borderRadius: radii.xl },
+  body: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl },
   top: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
   },
   topRight: { flexDirection: 'row', gap: spacing.sm },
   iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     ...shadows.soft,
   },
-  imgCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 28,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
-    ...shadows.card,
+  storeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    backgroundColor: colors.tint,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radii.pill,
+    marginBottom: spacing.md,
+    maxWidth: '100%',
   },
-  heroImg: {
-    width: '100%',
-    height: 220,
-    borderRadius: radii.xl,
-  },
-  storeLine: {
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
-    fontSize: 14,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  price: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: colors.primary,
-    marginBottom: spacing.lg,
-  },
+  storeName: { fontFamily: fonts.bold, fontSize: 13, color: colors.primaryDark },
+  title: { fontFamily: fonts.display, fontSize: 28, lineHeight: 31, letterSpacing: -0.2, color: colors.text },
+  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: spacing.sm, marginBottom: spacing.xl },
+  price: { fontFamily: fonts.display, fontSize: 28, letterSpacing: -0.2, color: colors.primary },
+  unit: { fontFamily: fonts.medium, fontSize: 15, color: colors.textSecondary },
   stepRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.mint,
+    backgroundColor: colors.surface,
     padding: spacing.lg,
-    borderRadius: radii.lg,
+    borderRadius: radii.xl,
     marginBottom: spacing.xl,
+    ...shadows.soft,
   },
-  stepLab: { color: colors.textSecondary, fontSize: 12 },
-  stepVal: { fontWeight: '700', color: colors.text, marginTop: 4 },
+  stepLab: { fontFamily: fonts.medium, fontSize: 12, color: colors.textSecondary },
+  stepVal: { fontFamily: fonts.bold, fontSize: 15, color: colors.text, marginTop: 4 },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   stepBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.surface,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.sand,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepBtnPlus: { backgroundColor: colors.primary },
-  stepBtnTxt: { fontSize: 20, fontWeight: '700', color: colors.text },
-  stepNum: { fontWeight: '800', fontSize: 16 },
-  sec: {
-    fontWeight: '700',
-    fontSize: 16,
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  desc: {
-    color: colors.textSecondary,
-    lineHeight: 22,
-    marginBottom: spacing.xl,
-  },
-  rel: {
-    width: 120,
-    marginRight: spacing.md,
-  },
-  relImg: {
-    width: 120,
-    height: 100,
-    borderRadius: radii.md,
-    marginBottom: spacing.sm,
-  },
-  relName: { fontSize: 12, fontWeight: '600', color: colors.text },
-  relPrice: { fontWeight: '700', color: colors.primary, marginTop: 4 },
+  stepNum: { fontFamily: fonts.display, fontSize: 22, minWidth: 28, textAlign: 'center', color: colors.text },
+  sec: { fontFamily: fonts.display, fontSize: 19, letterSpacing: -0.3, color: colors.text, marginBottom: spacing.sm },
+  desc: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 23, color: colors.textSecondary },
   bar: {
     position: 'absolute',
     left: 0,
@@ -310,28 +321,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: spacing.lg,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
     backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    ...shadows.soft,
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
+    ...shadows.lifted,
   },
-  barLab: { fontSize: 11, color: colors.textSecondary },
-  barTot: { fontSize: 18, fontWeight: '800', color: colors.text },
-  barBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radii.md,
-    maxWidth: '62%',
-  },
-  barBtnTxt: {
-    color: colors.surface,
-    fontWeight: '700',
-    flexShrink: 1,
-  },
+  barLab: { fontFamily: fonts.medium, fontSize: 12, color: colors.textSecondary },
+  barTot: { fontFamily: fonts.display, fontSize: 22, letterSpacing: -0.2, color: colors.text },
+  barLeft: { flexShrink: 1, minWidth: 84 },
+  barBtn: { flexGrow: 1, flexShrink: 0, flexBasis: 160, maxWidth: 240 },
 });

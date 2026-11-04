@@ -1,26 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  ImageBackground,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useRef, useState } from 'react';
+import { Animated, ImageBackground, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AuthSplitShell } from '../../components/auth/AuthSplitShell';
 import { AuthTextField } from '../../components/auth/AuthTextField';
+import { FormAlert } from '../../components/auth/FormAlert';
+import { PrimaryButton } from '../../components/common/PrimaryButton';
+import { PressableScale } from '../../components/motion/PressableScale';
 import { useAuth } from '../../context/AuthContext';
 import type { AuthStackParamList } from '../../navigation/AuthNavigator';
-import { colors, radii, spacing } from '../../theme';
-import { parseApiError } from '../../utils/parseApiError';
+import { brand, colors, fonts, radii, spacing } from '../../theme';
+import { describeAuthError, type AuthErrorInfo } from '../../utils/authErrors';
+import { haptic } from '../../utils/haptics';
 
-const ACCENT_LINK = '#A0522D';
-
-const PROMO_URI =
-  'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=900&q=80';
+import { appAlert } from '../../context/DialogContext';
+const PROMO_URI = 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=900&q=80';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
@@ -30,203 +24,172 @@ export function LoginScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<(AuthErrorInfo & { fields: 'both' | 'email' | 'password' | 'none' }) | null>(null);
+  const shake = useRef(new Animated.Value(0)).current;
+
+  const nudge = () => {
+    haptic.error();
+    shake.setValue(0);
+    Animated.sequence(
+      [10, -9, 7, -5, 3, 0].map((x) => Animated.timing(shake, { toValue: x, duration: 55, useNativeDriver: true })),
+    ).start();
+  };
 
   const onLogin = async () => {
     if (busy) return;
-    if (!email || !password) {
-      Alert.alert('Error', 'Please enter your email and password.');
+    if (!email.trim() || !password) {
+      setProblem({
+        kind: 'other',
+        title: 'Almost there',
+        message: !email.trim() && !password ? 'Enter your email or phone number and your password.' : !email.trim() ? 'Enter your email or phone number.' : 'Enter your password.',
+        fields: !email.trim() && !password ? 'both' : !email.trim() ? 'email' : 'password',
+      });
+      nudge();
       return;
     }
     setBusy(true);
+    setProblem(null);
     try {
-      await signIn(email, password);
+      await signIn(email.trim(), password);
+      haptic.success();
     } catch (error: unknown) {
-      const msg = parseApiError(error, {
-        fallback: 'Login failed. Please try again.',
-        unauthorizedFallback: 'Incorrect email/phone or password. Please try again.',
-      });
-      Alert.alert('Login Error', msg);
+      const info = describeAuthError(error, 'login');
+      setProblem({ ...info, fields: info.kind === 'credentials' ? 'both' : 'none' });
+      if (info.kind === 'credentials') setPassword('');
+      nudge();
     } finally {
       setBusy(false);
     }
   };
 
+  const onEdit = (setter: (v: string) => void) => (v: string) => {
+    setter(v);
+    if (problem) setProblem(null);
+  };
+
   return (
     <AuthSplitShell
-      title="Welcome Back"
-      subtitle="Log in to continue your fresh market journey"
+      title="Welcome back"
+      subtitle="Log in and grab your fresh groceries in minutes."
       belowCard={
         <>
           <View style={styles.footerRow}>
-            <Text style={styles.footerMuted}>Don&apos;t have an account? </Text>
-            <Pressable onPress={() => navigation.navigate('Register')}>
-              <Text style={styles.footerLink}>Sign Up</Text>
+            <Text style={styles.footerMuted}>New to Grabit? </Text>
+            <Pressable onPress={() => navigation.navigate('Register')} hitSlop={8}>
+              <Text style={styles.footerLink}>Create an account</Text>
             </Pressable>
           </View>
-          <ImageBackground
-            source={{ uri: PROMO_URI }}
-            style={styles.promo}
-            imageStyle={styles.promoImg}
-          >
+          <ImageBackground source={{ uri: PROMO_URI }} style={styles.promo} imageStyle={styles.promoImg}>
             <View style={styles.promoTint}>
-              <Text style={styles.promoTxt}>
-                Market-fresh quality delivered to your doorstep in minutes.
-              </Text>
+              <View style={styles.promoDot} />
+              <Text maxFontSizeMultiplier={1.25} style={styles.promoTxt}>Market-fresh quality delivered to your doorstep in minutes.</Text>
             </View>
           </ImageBackground>
-          <Text style={styles.legal}>
-            © 2024 Goshop Technologies Ltd. Lagos, Nigeria.
-          </Text>
+          <Text style={styles.legal}>© Grabit · Lagos, Nigeria</Text>
         </>
       }
     >
-      <AuthTextField
-        label="Email or Phone Number"
-        icon="at-outline"
-        placeholder="e.g. name@domain.com"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        variant="mintBorder"
-      />
-      <AuthTextField
-        label="Password"
-        icon="lock-closed-outline"
-        placeholder="••••••••"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        onToggleSecure={() => setShowPass((v) => !v)}
-        secureVisible={showPass}
-        variant="mintBorder"
-      />
-      <Pressable
-        style={styles.forgotWrap}
-        onPress={() => navigation.navigate('ForgotPassword')}
-      >
-        <Text style={styles.forgot}>Forgot Password?</Text>
-      </Pressable>
-      <Pressable
-        style={[styles.primary, busy && styles.primaryDisabled]}
-        onPress={onLogin}
-        disabled={busy}
-      >
-        {busy ? (
-          <ActivityIndicator color={colors.surface} />
-        ) : (
-          <>
-            <Text style={styles.primaryTxt}>Login</Text>
-            <Ionicons name="arrow-forward" size={20} color={colors.surface} />
-          </>
-        )}
-      </Pressable>
+      <Animated.View style={{ transform: [{ translateX: shake }] }}>
+        <AuthTextField
+          label="Email or phone number"
+          icon="at"
+          placeholder="e.g. name@domain.com"
+          value={email}
+          onChangeText={onEdit(setEmail)}
+          keyboardType="email-address"
+          error={problem?.fields === 'both' || problem?.fields === 'email'}
+        />
+        <AuthTextField
+          label="Password"
+          icon="lock-closed"
+          placeholder="••••••••"
+          value={password}
+          onChangeText={onEdit(setPassword)}
+          secureTextEntry
+          onToggleSecure={() => setShowPass((v) => !v)}
+          secureVisible={showPass}
+          error={problem?.fields === 'both' || problem?.fields === 'password'}
+        />
+        {problem ? (
+          <FormAlert
+            kind={problem.kind}
+            title={problem.title}
+            message={problem.message}
+            actionLabel={problem.kind === 'credentials' ? 'Reset my password' : undefined}
+            onAction={problem.kind === 'credentials' ? () => navigation.navigate('ForgotPassword') : undefined}
+          />
+        ) : null}
+      </Animated.View>
+      {problem?.kind === 'credentials' ? null : (
+        <Pressable style={styles.forgotWrap} onPress={() => navigation.navigate('ForgotPassword')} hitSlop={8}>
+          <Text style={styles.forgot}>Forgot password?</Text>
+        </Pressable>
+      )}
+      <PrimaryButton label={busy ? 'Logging in…' : 'Log in'} icon="arrow-forward" loading={busy} disabled={busy} onPress={onLogin} />
       <View style={styles.orRow}>
         <View style={styles.orLine} />
-        <Text style={styles.or}>OR</Text>
+        <Text style={styles.or}>or continue with</Text>
         <View style={styles.orLine} />
       </View>
       <View style={styles.socialRow}>
-        <Pressable
+        <PressableScale
+          containerStyle={{ flex: 1 }}
           style={styles.socialBtn}
-          onPress={() =>
-            Alert.alert('Google', 'Social sign-in is not connected in this demo.')
-          }
+          onPress={() => appAlert('Google', 'Social sign-in is not connected in this demo.')}
+          accessibilityRole="button"
+          accessibilityLabel="Continue with Google"
         >
-          <Text style={styles.socialG}>G</Text>
+          <Ionicons name="logo-google" size={18} color={colors.text} />
           <Text style={styles.socialLab}>Google</Text>
-        </Pressable>
-        <Pressable
+        </PressableScale>
+        <PressableScale
+          containerStyle={{ flex: 1 }}
           style={styles.socialBtn}
-          onPress={() =>
-            Alert.alert('Apple', 'Social sign-in is not connected in this demo.')
-          }
+          onPress={() => appAlert('Apple', 'Social sign-in is not connected in this demo.')}
+          accessibilityRole="button"
+          accessibilityLabel="Continue with Apple"
         >
-          <Text style={styles.socialIOS}>iOS</Text>
-        </Pressable>
+          <Ionicons name="logo-apple" size={20} color={colors.text} />
+          <Text style={styles.socialLab}>Apple</Text>
+        </PressableScale>
       </View>
     </AuthSplitShell>
   );
 }
 
 const styles = StyleSheet.create({
-  forgotWrap: { alignSelf: 'flex-end', marginBottom: spacing.lg },
-  forgot: { color: ACCENT_LINK, fontWeight: '700', fontSize: 14 },
-  primary: {
-    backgroundColor: colors.primary,
-    borderRadius: radii.md,
-    paddingVertical: spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-  },
-  primaryDisabled: { opacity: 0.85 },
-  primaryTxt: { color: colors.surface, fontWeight: '800', fontSize: 16 },
-  orRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.xl,
-    marginBottom: spacing.md,
-    gap: spacing.md,
-  },
+  forgotWrap: { alignSelf: 'flex-end', marginBottom: spacing.lg, marginTop: -spacing.xs },
+  forgot: { fontFamily: fonts.bold, color: colors.primary, fontSize: 14 },
+  orRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.xl, marginBottom: spacing.md, gap: spacing.md },
   orLine: { flex: 1, height: 1, backgroundColor: colors.border },
-  or: { color: colors.textMuted, fontWeight: '600', fontSize: 12 },
+  or: { fontFamily: fonts.medium, color: colors.textMuted, fontSize: 12 },
   socialRow: { flexDirection: 'row', gap: spacing.md },
   socialBtn: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    paddingVertical: spacing.lg,
-    borderRadius: radii.md,
-    borderWidth: 1,
+    paddingVertical: spacing.md + 2,
+    borderRadius: radii.lg,
+    borderWidth: 1.5,
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
-  socialG: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: colors.primary,
-  },
-  socialLab: { fontWeight: '600', color: colors.text },
-  socialIOS: {
-    fontWeight: '800',
-    fontSize: 16,
-    color: colors.text,
-  },
-  footerRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    marginBottom: spacing.lg,
-  },
-  footerMuted: { color: colors.textSecondary },
-  footerLink: { color: colors.primary, fontWeight: '800' },
-  promo: {
-    height: 140,
-    borderRadius: radii.lg,
-    overflow: 'hidden',
-    marginBottom: spacing.lg,
-  },
-  promoImg: { borderRadius: radii.lg },
+  socialLab: { fontFamily: fonts.bold, fontSize: 15, color: colors.text },
+  footerRow: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', marginBottom: spacing.lg },
+  footerMuted: { fontFamily: fonts.regular, fontSize: 15, color: colors.textSecondary },
+  footerLink: { fontFamily: fonts.bold, fontSize: 15, color: colors.primary },
+  promo: { height: 132, borderRadius: radii.xl, overflow: 'hidden', marginBottom: spacing.lg },
+  promoImg: { borderRadius: radii.xl },
   promoTint: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: 'rgba(23,38,30,0.55)',
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.lg,
+    gap: spacing.md,
+    padding: spacing.xl,
   },
-  promoTxt: {
-    color: colors.surface,
-    fontWeight: '700',
-    fontSize: 15,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  legal: {
-    textAlign: 'center',
-    color: colors.textMuted,
-    fontSize: 11,
-  },
+  promoDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: brand.butter },
+  promoTxt: { flex: 1, fontFamily: fonts.display, color: brand.cream, fontSize: 17, lineHeight: 21 },
+  legal: { fontFamily: fonts.regular, textAlign: 'center', color: colors.textMuted, fontSize: 12 },
 });

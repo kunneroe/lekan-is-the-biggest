@@ -1,31 +1,47 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
+  Animated,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GrabitLoader } from '../components/brand/GrabitLoader';
+import { GrabitMark } from '../components/brand/GrabitMark';
+import { EmptyState } from '../components/common/EmptyState';
+import { FadeInUp } from '../components/motion/FadeInUp';
+import { PressableScale } from '../components/motion/PressableScale';
 import { ProductImage } from '../components/ProductImage';
 import { orderService } from '../services/orderService';
 import { navigateRoot } from '../navigation/navigationRef';
-import { colors, radii, shadows, spacing, typography } from '../theme';
+import { brand, colors, fonts, radii, shadows, spacing } from '../theme';
+import { haptic } from '../utils/haptics';
 import { parseApiError } from '../utils/parseApiError';
+import { cancellationText } from '../utils/orderStatus';
 
+import { appAlert } from '../context/DialogContext';
 export function OrdersScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const [tab, setTab] = useState<'active' | 'past'>('active');
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const [segW, setSegW] = useState(0);
+  const seg = useRef(new Animated.Value(0)).current;
 
-  const ACTIVE_STATUSES = ['CONFIRMED', 'PREPARING', 'RIDER_ASSIGNED', 'PICKED_UP', 'ON_THE_WAY'];
+  const ACTIVE_STATUSES = ['CONFIRMED', 'PREPARING', 'READY', 'RIDER_ASSIGNED', 'PICKED_UP', 'ON_THE_WAY'];
   const PAST_STATUSES = ['DELIVERED', 'CANCELLED'];
+
+  useEffect(() => {
+    Animated.spring(seg, { toValue: tab === 'active' ? 0 : 1, friction: 8, tension: 90, useNativeDriver: true }).start();
+  }, [tab, seg]);
 
   useFocusEffect(
     useCallback(() => {
@@ -35,7 +51,7 @@ export function OrdersScreen() {
           const data = await orderService.getOrders(param);
           setOrders(data.orders || data || []);
         } catch (error: unknown) {
-          Alert.alert(
+          appAlert(
             'Unable to Load Orders',
             parseApiError(error, {
               fallback: 'Failed to load order history. Please try again.',
@@ -43,104 +59,112 @@ export function OrdersScreen() {
           );
         } finally {
           setLoading(false);
+          setRefreshing(false);
         }
       };
 
       setLoading(true);
       fetchOrders();
-    }, [tab])
+    }, [tab, reloadKey]),
   );
 
   const active = orders.filter((o) => ACTIVE_STATUSES.includes(o.status));
   const past = orders.filter((o) => PAST_STATUSES.includes(o.status));
 
+  const switchTab = (t: 'active' | 'past') => {
+    if (t === tab) return;
+    haptic.select();
+    setTab(t);
+  };
+
   return (
     <View style={styles.screen}>
       <View style={[styles.top, { paddingTop: insets.top + spacing.md }]}>
-        <Pressable onPress={() => Alert.alert('Menu', 'Drawer is mocked for demo.')}>
-          <Ionicons name="menu" size={26} color={colors.primary} />
-        </Pressable>
-        <Text style={styles.brand}>Goshop</Text>
-        <ImageAvatar />
+        <View>
+          <Text maxFontSizeMultiplier={1.25} style={styles.title}>Your orders</Text>
+          <Text style={styles.subtitle}>Track, reorder and relive your grabs</Text>
+        </View>
+        <GrabitMark size={32} />
       </View>
-      <Text style={styles.title}>My orders</Text>
-      <View style={styles.seg}>
-        <Pressable
-          style={[styles.segBtn, tab === 'active' && styles.segOn]}
-          onPress={() => setTab('active')}
-        >
-          <Text style={[styles.segTxt, tab === 'active' && styles.segTxtOn]}>
-            Active orders
-          </Text>
-        </Pressable>
-        <Pressable
-          style={[styles.segBtn, tab === 'past' && styles.segOn]}
-          onPress={() => setTab('past')}
-        >
-          <Text style={[styles.segTxt, tab === 'past' && styles.segTxtOn]}>
-            Past orders
-          </Text>
-        </Pressable>
+
+      <View style={styles.seg} onLayout={(e) => setSegW(e.nativeEvent.layout.width)}>
+        {segW > 0 ? (
+          <Animated.View
+            style={[
+              styles.segIndicator,
+              {
+                width: (segW - 8) / 2,
+                transform: [{ translateX: seg.interpolate({ inputRange: [0, 1], outputRange: [0, (segW - 8) / 2] }) }],
+              },
+            ]}
+          />
+        ) : null}
+        {(['active', 'past'] as const).map((t) => (
+          <Pressable
+            key={t}
+            style={styles.segBtn}
+            onPress={() => switchTab(t)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: tab === t }}
+          >
+            <Text style={[styles.segTxt, tab === t && styles.segTxtOn]}>{t === 'active' ? 'Active' : 'Past orders'}</Text>
+          </Pressable>
+        ))}
       </View>
+
       <ScrollView
-        contentContainerStyle={{
-          padding: spacing.xl,
-          paddingBottom: insets.bottom + 100,
-        }}
+        contentContainerStyle={{ padding: spacing.xl, paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              haptic.tap();
+              setRefreshing(true);
+              setReloadKey((k) => k + 1);
+            }}
+            tintColor={brand.green}
+            colors={[brand.green, brand.butter]}
+          />
+        }
       >
-        {loading ? (
-          <View style={{ marginTop: spacing.xxxl, alignItems: 'center' }}>
-            <ActivityIndicator size="large" color={colors.primary} />
+        {loading && !refreshing ? (
+          <View style={styles.loading}>
+            <GrabitLoader size={44} />
           </View>
         ) : (
           <>
             {tab === 'active' && active.length === 0 ? (
-              <View style={styles.emptyWrap}>
-                <Ionicons name="cube-outline" size={56} color={colors.textMuted} />
-                <Text style={styles.emptyTitle}>No active orders</Text>
-                <Text style={styles.emptySub}>
-                  After you place an order at checkout, it will appear here with
-                  tracking and rider updates.
-                </Text>
-                <Pressable
-                  style={styles.emptyBtn}
-                  onPress={() => navigation.navigate('Home' as never)}
-                >
-                  <Text style={styles.emptyBtnTxt}>Start shopping</Text>
-                </Pressable>
-              </View>
+              <EmptyState
+                art="bag"
+                title="No active orders"
+                body="After you place an order, it will appear here with live tracking and rider updates."
+                actionLabel="Start shopping"
+                onAction={() => navigation.navigate('Home' as never)}
+              />
             ) : null}
-            {tab === 'active'
-              ? active.map((o) => <ActiveCard key={o.id} order={o} />)
-              : null}
+            {tab === 'active' ? active.map((o, i) => <ActiveCard key={o.id} order={o} index={i} />) : null}
             {tab === 'past' && past.length === 0 ? (
-              <View style={styles.emptyWrap}>
-                <Ionicons name="time-outline" size={56} color={colors.textMuted} />
-                <Text style={styles.emptyTitle}>No past orders yet</Text>
-                <Text style={styles.emptySub}>
-                  Completed and delivered orders will be listed here for easy
-                  reordering.
-                </Text>
-                <Pressable
-                  style={styles.emptyBtn}
-                  onPress={() => navigation.navigate('Home' as never)}
-                >
-                  <Text style={styles.emptyBtnTxt}>Browse supermarkets</Text>
-                </Pressable>
-              </View>
+              <EmptyState
+                art="mark"
+                title="No past orders yet"
+                body="Delivered orders will be listed here for easy reordering."
+                actionLabel="Browse supermarkets"
+                onAction={() => navigation.navigate('Home' as never)}
+              />
             ) : null}
             {tab === 'past' && past.length > 0 ? (
               <>
                 <View style={styles.pastHead}>
-                  <Text style={styles.pastTitle}>Past orders</Text>
-                  <Pressable onPress={() => Alert.alert('View all', 'Showing all past orders.')}>
-                    <Text style={styles.viewAll}>View all</Text>
+                  <Text maxFontSizeMultiplier={1.25} style={styles.pastTitle}>Recent</Text>
+                  <Pressable onPress={() => navigateRoot('OrderHistory')} hitSlop={8} style={styles.viewAll}>
+                    <Text style={styles.viewAllTxt}>View all</Text>
+                    <Ionicons name="arrow-forward" size={14} color={colors.primary} />
                   </Pressable>
                 </View>
                 <View style={styles.pastBox}>
-                  {past.map((o) => (
-                    <PastRow key={o.id} order={o} />
+                  {past.map((o, i) => (
+                    <PastRow key={o.id} order={o} index={i} last={i === past.length - 1} />
                   ))}
                 </View>
               </>
@@ -152,106 +176,119 @@ export function OrdersScreen() {
   );
 }
 
-function ImageAvatar() {
-  return (
-    <View style={styles.avatar}>
-      <Ionicons name="person" size={18} color={colors.textSecondary} />
-    </View>
-  );
-}
-
-function ActiveCard({ order }: { order: any }) {
+function ActiveCard({ order, index }: { order: any; index: number }) {
   const lines = order.lines || order.items || [];
   const firstImage =
-    lines[0]?.productImageUrl ||
-    lines[0]?.product?.imageUrl ||
-    lines[0]?.product?.image ||
-    lines[0]?.image ||
-    null;
+    lines[0]?.productImageUrl || lines[0]?.product?.imageUrl || lines[0]?.product?.image || lines[0]?.image || null;
   const storeName = order.storeName || order.supermarket?.name || 'Supermarket';
 
   const status = order.status || '';
   const isOnTheWay = status === 'ON_THE_WAY' || status === 'PICKED_UP';
-  const badge = isOnTheWay ? 'ON THE WAY' : 'PROCESSING';
-  const badgeStyle = isOnTheWay ? styles.badgeGreen : styles.badgeOrange;
+  const badge = isOnTheWay ? 'On the way' : 'Processing';
 
   const displayTotal = Number(order.totalAmount ?? order.total ?? 0);
   const displayDate = order.placedAt || order.createdAt;
 
   return (
-    <View style={styles.card}>
-      <View style={styles.cardTop}>
-        <ProductImage
-          uri={firstImage}
-          style={styles.storeThumb}
-          label={storeName}
-        />
-        <View style={{ flex: 1 }}>
-          <Text style={styles.storeName}>{storeName}</Text>
-          <Text style={styles.time}>{new Date(displayDate).toLocaleDateString()}</Text>
+    <FadeInUp index={index}>
+      <View style={styles.card}>
+        <View style={styles.cardTop}>
+          <ProductImage uri={firstImage} style={styles.storeThumb} label={storeName} />
+          <View style={{ flex: 1 }}>
+            <Text maxFontSizeMultiplier={1.25} style={styles.storeName} numberOfLines={1}>
+              {storeName}
+            </Text>
+            <Text style={styles.time}>{new Date(displayDate).toLocaleDateString()}</Text>
+          </View>
+          <View style={[styles.badge, isOnTheWay ? styles.badgeGo : styles.badgeWait]}>
+            <View style={[styles.badgeDot, { backgroundColor: isOnTheWay ? brand.ink : brand.butter }]} />
+            <Text style={styles.badgeTxt}>{badge}</Text>
+          </View>
         </View>
-        <View style={[styles.badge, badgeStyle]}>
-          <Text
-            style={[
-              styles.badgeTxt,
-              isOnTheWay ? styles.badgeTxtDark : styles.badgeTxtOrange,
-            ]}
+        <View style={styles.mid}>
+          <View>
+            <Text style={styles.ot}>Order total</Text>
+            <Text maxFontSizeMultiplier={1.25} style={styles.op}>₦{displayTotal.toLocaleString()}</Text>
+          </View>
+          <Text style={styles.items}>{lines.length} items</Text>
+        </View>
+        <View style={styles.actions}>
+          <PressableScale
+            containerStyle={{ flex: 1 }}
+            style={styles.track}
+            hapticFeedback
+            onPress={() => navigateRoot('TrackOrder', { orderId: order.id })}
+            accessibilityRole="button"
           >
-            {badge}
-          </Text>
+            <Ionicons name="navigate" size={18} color={colors.surface} />
+            <Text style={styles.trackTxt}>Track order</Text>
+          </PressableScale>
+          <PressableScale
+            style={styles.phone}
+            onPress={() => appAlert('Call Rider', 'This would call the assigned rider.')}
+            accessibilityRole="button"
+            accessibilityLabel="Call rider"
+          >
+            <Ionicons name="call" size={18} color={colors.primary} />
+          </PressableScale>
         </View>
       </View>
-      <View style={styles.div} />
-      <View style={styles.mid}>
-        <View>
-          <Text style={styles.ot}>Order total</Text>
-          <Text style={styles.op}>₦{displayTotal.toLocaleString()}</Text>
-        </View>
-        <Text style={styles.items}>{lines.length} items</Text>
-      </View>
-      <View style={styles.actions}>
-        <Pressable
-          style={styles.track}
-          onPress={() => navigateRoot('TrackOrder', { orderId: order.id })}
-        >
-          <Ionicons name="bicycle" size={18} color={colors.surface} />
-          <Text style={styles.trackTxt}>Track order</Text>
-        </Pressable>
-        <Pressable
-          style={styles.phone}
-          onPress={() => Alert.alert('Call Rider', 'This would call the assigned rider.')}
-        >
-          <Ionicons name="call" size={18} color={colors.text} />
-        </Pressable>
-      </View>
-    </View>
+    </FadeInUp>
   );
 }
 
-function PastRow({ order }: { order: any }) {
+function PastRow({ order, index, last }: { order: any; index: number; last: boolean }) {
   const storeName = order.storeName || order.supermarket?.name || 'Supermarket';
   const displayTotal = Number(order.totalAmount ?? order.total ?? 0);
   const displayDate = order.placedAt || order.createdAt;
 
+  const isCancelled = order.status === 'CANCELLED';
+
   return (
-    <View style={styles.pastRow}>
-      <View style={styles.pastIcon}>
-        <Ionicons name="storefront-outline" size={20} color={colors.primary} />
+    <FadeInUp index={index}>
+      <View style={[styles.pastRow, last && { borderBottomWidth: 0 }]}>
+        {/* Tapping the order opens its detail/tracking view; Reorder (below) is a separate button. */}
+        <Pressable
+          style={styles.pastMain}
+          accessibilityRole="button"
+          accessibilityLabel={`Open order from ${storeName}`}
+          onPress={() => navigateRoot('TrackOrder', { orderId: order.id })}
+        >
+          <View style={[styles.pastIcon, isCancelled && { backgroundColor: colors.redTint }]}>
+            <Ionicons
+              name={isCancelled ? 'close' : 'checkmark'}
+              size={18}
+              color={isCancelled ? colors.danger : colors.primary}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.pastStore} numberOfLines={1}>
+              {storeName}
+            </Text>
+            <Text style={styles.pastDate}>
+              {new Date(displayDate).toLocaleDateString()} · ₦{displayTotal.toLocaleString()}
+            </Text>
+            {isCancelled && (
+              <Text style={styles.pastCancel} numberOfLines={2}>
+                {cancellationText(order)}
+              </Text>
+            )}
+          </View>
+        </Pressable>
+        <PressableScale
+          style={styles.reorder}
+          hapticFeedback
+          onPress={() => {
+            navigateRoot('Store', { storeId: order.storeId || order.supermarketId });
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`Reorder from ${storeName}`}
+        >
+          <Ionicons name="refresh" size={14} color={brand.ink} />
+          <Text style={styles.reorderTxt}>Reorder</Text>
+        </PressableScale>
       </View>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.pastStore}>{storeName}</Text>
-        <Text style={styles.pastDate}>{new Date(displayDate).toLocaleDateString()}</Text>
-      </View>
-      <Text style={styles.pastPrice}>₦{displayTotal.toLocaleString()}</Text>
-      <Pressable
-        style={styles.reorder}
-        onPress={() => {
-          navigateRoot('Store', { storeId: order.storeId || order.supermarketId });
-        }}
-      >
-        <Text style={styles.reorderTxt}>Reorder</Text>
-      </Pressable>
-    </View>
+    </FadeInUp>
   );
 }
 
@@ -263,128 +300,94 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.md,
-    backgroundColor: colors.surface,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
   },
-  brand: { fontSize: 18, fontWeight: '800', color: colors.primary },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.mint,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: colors.text,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-  },
+  title: { fontFamily: fonts.display, fontSize: 30, letterSpacing: -0.2, color: colors.text },
+  subtitle: { fontFamily: fonts.regular, fontSize: 14, color: colors.textSecondary, marginTop: 2 },
   seg: {
     flexDirection: 'row',
     marginHorizontal: spacing.xl,
-    marginTop: spacing.lg,
-    backgroundColor: colors.mint,
+    marginTop: spacing.sm,
+    backgroundColor: colors.sand,
     borderRadius: radii.lg,
     padding: 4,
   },
-  segBtn: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
+  segIndicator: {
+    position: 'absolute',
+    top: 4,
+    bottom: 4,
+    left: 4,
     borderRadius: radii.md,
+    backgroundColor: brand.ink,
   },
-  segOn: { backgroundColor: colors.surface, ...shadows.soft },
-  segTxt: { color: colors.textSecondary, fontWeight: '600' },
-  segTxtOn: { color: colors.primary },
+  segBtn: { flex: 1, paddingVertical: spacing.md, alignItems: 'center' },
+  segTxt: { fontFamily: fonts.bold, fontSize: 14, color: colors.textSecondary },
+  segTxtOn: { color: brand.cream },
+  loading: { marginTop: spacing.xxxl * 2, alignItems: 'center' },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radii.lg,
+    borderRadius: radii.xl,
     padding: spacing.lg,
     marginBottom: spacing.lg,
     ...shadows.card,
   },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  storeThumb: { width: 48, height: 48, borderRadius: radii.sm },
-  storeName: { fontWeight: '800', color: colors.text },
-  time: { color: colors.textSecondary, fontSize: 13, marginTop: 2 },
-  badge: { paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radii.pill },
-  badgeGreen: { backgroundColor: colors.mint },
-  badgeOrange: { backgroundColor: '#FFF3E0' },
-  badgeTxt: { fontSize: 10, fontWeight: '800' },
-  badgeTxtDark: { color: colors.primary },
-  badgeTxtOrange: { color: '#C2410C' },
-  div: { height: 1, backgroundColor: colors.border, marginVertical: spacing.md },
-  mid: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  ot: { color: colors.textSecondary, fontSize: 12 },
-  op: { fontWeight: '800', color: colors.text, marginTop: 2 },
-  items: { color: colors.textSecondary, fontSize: 13 },
+  storeThumb: { width: 52, height: 52, borderRadius: radii.md },
+  storeName: { fontFamily: fonts.display, fontSize: 17, color: colors.text },
+  time: { fontFamily: fonts.regular, color: colors.textSecondary, fontSize: 13, marginTop: 2 },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 5,
+    borderRadius: radii.pill,
+  },
+  badgeGo: { backgroundColor: brand.sprout },
+  badgeWait: { backgroundColor: colors.redTint },
+  badgeDot: { width: 7, height: 7, borderRadius: 4 },
+  badgeTxt: { fontFamily: fonts.bold, fontSize: 12, color: brand.ink },
+  mid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginTop: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: colors.border,
+  },
+  ot: { fontFamily: fonts.regular, color: colors.textSecondary, fontSize: 12 },
+  op: { fontFamily: fonts.display, fontSize: 20, color: colors.text, marginTop: 2 },
+  items: { fontFamily: fonts.medium, color: colors.textSecondary, fontSize: 13 },
   actions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg },
   track: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
     backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    borderRadius: radii.md,
+    paddingVertical: spacing.md + 2,
+    borderRadius: radii.lg,
   },
-  trackTxt: { color: colors.surface, fontWeight: '800' },
+  trackTxt: { fontFamily: fonts.bold, fontSize: 15, color: colors.surface },
   phone: {
-    width: 48,
-    height: 48,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    width: 50,
+    height: 50,
+    borderRadius: radii.lg,
+    backgroundColor: colors.tint,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
   },
-  emptyWrap: {
-    alignItems: 'center',
-    paddingVertical: spacing.xxxl,
-    paddingHorizontal: spacing.md,
-  },
-  emptyTitle: {
-    ...typography.sectionTitle,
-    marginTop: spacing.lg,
-    color: colors.text,
-    textAlign: 'center',
-  },
-  emptySub: {
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-    lineHeight: 22,
-    maxWidth: 320,
-  },
-  emptyBtn: {
-    marginTop: spacing.xl,
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.xxl,
-    paddingVertical: spacing.lg,
-    borderRadius: radii.md,
-  },
-  emptyBtnTxt: { color: colors.surface, fontWeight: '800' },
-  pastHead: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  pastTitle: { fontWeight: '800', fontSize: 16, color: colors.text },
-  viewAll: { color: colors.primary, fontWeight: '600' },
+  pastHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
+  pastTitle: { fontFamily: fonts.display, fontSize: 20, color: colors.text },
+  viewAll: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  viewAllTxt: { fontFamily: fonts.bold, fontSize: 14, color: colors.primary },
   pastBox: {
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    padding: spacing.md,
+    borderRadius: radii.xl,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs,
     backgroundColor: colors.surface,
+    ...shadows.soft,
   },
   pastRow: {
     flexDirection: 'row',
@@ -398,18 +401,22 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.mint,
+    backgroundColor: colors.tint,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pastStore: { fontWeight: '700', color: colors.text },
-  pastDate: { color: colors.textSecondary, fontSize: 12 },
-  pastPrice: { fontWeight: '800', color: colors.primary },
+  pastMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  pastCancel: { fontFamily: fonts.semibold, color: colors.danger, fontSize: 12, marginTop: 2 },
+  pastStore: { fontFamily: fonts.bold, fontSize: 15, color: colors.text },
+  pastDate: { fontFamily: fonts.regular, color: colors.textSecondary, fontSize: 13, marginTop: 1 },
   reorder: {
-    backgroundColor: '#FFF3E0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: brand.sprout,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radii.pill,
   },
-  reorderTxt: { color: colors.bannerOrange, fontWeight: '700', fontSize: 12 },
+  reorderTxt: { fontFamily: fonts.bold, fontSize: 13, color: brand.ink },
 });

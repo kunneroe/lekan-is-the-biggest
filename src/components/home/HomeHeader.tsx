@@ -1,102 +1,98 @@
 import { Ionicons } from '@expo/vector-icons';
-import {
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { colors, spacing, typography } from '../../theme';
+import type { ReactNode } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { brand, fonts, radii, spacing } from '../../theme';
+import { GrabitMark } from '../brand/GrabitMark';
+import { GrabitLogo } from '../brand/GrabitWordmark';
 
 type Props = {
   greeting: string;
   deliveryLine: string;
   onPressDelivery?: () => void;
   onPressNotifications?: () => void;
-  avatarUri?: string;
+  /** search bar (sits inside the green panel) */
+  children?: ReactNode;
 };
 
-export function HomeHeader({
-  greeting,
-  deliveryLine,
-  onPressDelivery,
-  onPressNotifications,
-  avatarUri = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80',
-}: Props) {
+/** Basil header panel: logo, delivery address, headline and search. */
+export function HomeHeader({ greeting, deliveryLine, onPressDelivery, onPressNotifications, children }: Props) {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.row}>
-      <View style={styles.left}>
-        <Image source={{ uri: avatarUri }} style={styles.avatar} />
-        <View style={styles.textBlock}>
-          <Text style={[styles.greeting, typography.greeting]}>{greeting}</Text>
-          <Pressable
-            onPress={onPressDelivery}
-            style={styles.deliveryRow}
-            hitSlop={8}
-          >
-            <Text style={[styles.delivery, typography.deliveryBold]} numberOfLines={1}>
-              Deliver to: {deliveryLine}
-            </Text>
-            <Ionicons name="chevron-down" size={16} color={colors.text} />
-          </Pressable>
-        </View>
+    <View style={[styles.panel, { paddingTop: insets.top + spacing.md }]}>
+      <GrabitMark size={260} variant="mono" color="rgba(185,232,58,0.12)" style={styles.watermark} />
+
+      <View style={styles.topRow}>
+        <GrabitLogo size={22} tone="brand" />
+        <Pressable
+          onPress={onPressNotifications}
+          style={({ pressed }) => [styles.bell, pressed && { transform: [{ scale: 0.92 }] }]}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Notifications"
+        >
+          <Ionicons name="notifications-outline" size={22} color="#FFFFFF" />
+        </Pressable>
       </View>
+
       <Pressable
-        onPress={onPressNotifications}
-        style={styles.bellWrap}
-        hitSlop={12}
+        onPress={onPressDelivery}
+        style={styles.delivery}
+        hitSlop={8}
         accessibilityRole="button"
-        accessibilityLabel="Notifications"
+        accessibilityLabel={`Deliver to ${deliveryLine}. Change address`}
       >
-        <Ionicons name="notifications-outline" size={22} color={colors.primary} />
+        <Text style={styles.deliverLabel}>Deliver to</Text>
+        <View style={styles.deliverRow}>
+          <Ionicons name="location" size={16} color={brand.sprout} />
+          <Text style={styles.deliverLine} numberOfLines={1}>
+            {deliveryLine}
+          </Text>
+          <Ionicons name="chevron-down" size={16} color="#FFFFFF" />
+        </View>
       </Pressable>
+
+      <Text style={styles.greeting}>{greeting}</Text>
+      <Text maxFontSizeMultiplier={1.25} style={styles.headline}>What are we grabbing today?</Text>
+
+      {children ? <View style={styles.search}>{children}</View> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.lg,
+  panel: {
+    backgroundColor: brand.green,
+    borderBottomLeftRadius: radii.xxl,
+    borderBottomRightRadius: radii.xxl,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xl,
+    overflow: 'hidden',
+    marginBottom: spacing.xl,
   },
-  left: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginRight: spacing.md,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.border,
-  },
-  textBlock: {
-    flex: 1,
-    minWidth: 0,
-  },
-  greeting: {
-    color: colors.textSecondary,
-    marginBottom: 2,
-  },
-  deliveryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  delivery: {
-    color: colors.text,
-    flexShrink: 1,
-  },
-  bellWrap: {
+  watermark: { position: 'absolute', right: -70, top: 10 },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  bell: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.mint,
+    backgroundColor: 'rgba(255,255,255,0.16)',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  delivery: { marginTop: spacing.lg, alignSelf: 'flex-start', maxWidth: '92%' },
+  deliverLabel: { fontFamily: fonts.bold, fontSize: 12, color: brand.sprout, letterSpacing: 0.3 },
+  deliverRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
+  deliverLine: { fontFamily: fonts.bold, fontSize: 15, color: '#FFFFFF', flexShrink: 1 },
+  greeting: { marginTop: spacing.lg, fontFamily: fonts.medium, fontSize: 15, color: brand.cream, opacity: 0.92 },
+  headline: {
+    fontFamily: fonts.display,
+    fontSize: 30,
+    lineHeight: 33,
+    letterSpacing: -0.2,
+    color: '#FFFFFF',
+    marginTop: 2,
+    maxWidth: 300,
+  },
+  search: { marginTop: spacing.lg },
 });

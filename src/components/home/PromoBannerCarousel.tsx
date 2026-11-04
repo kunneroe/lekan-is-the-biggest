@@ -1,160 +1,230 @@
-import {
-  Alert,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { colors, radii, spacing, typography } from '../../theme';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { brand, fonts, radii, spacing } from '../../theme';
+import { GrabitMark } from '../brand/GrabitMark';
+import { PressableScale } from '../motion/PressableScale';
+import { useReducedMotion } from '../../utils/motion';
+import { useLayout } from '../../utils/responsive';
 
-const GREEN_IMG =
-  'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=800&q=80';
-
+import { appAlert } from '../../context/DialogContext';
 type Banner = {
   id: string;
   title: string;
   subtitle: string;
   cta: string;
-  backgroundColor: string;
+  bg: string;
+  fg: string;
+  ctaBg: string;
+  ctaFg: string;
+  mark: string;
   image: string;
-  ctaStyle: 'darkOnLight' | 'lightOnDark';
 };
 
 const BANNERS: Banner[] = [
   {
     id: '1',
     title: 'Free delivery on your first order',
-    subtitle: 'Enjoy zero delivery fees on all local markets today.',
-    cta: 'Claim Now',
-    backgroundColor: colors.primaryDark,
-    image: GREEN_IMG,
-    ctaStyle: 'darkOnLight',
+    subtitle: 'Zero delivery fees on local markets today.',
+    cta: 'Claim now',
+    bg: brand.ink,
+    fg: brand.cream,
+    ctaBg: brand.butter,
+    ctaFg: brand.ink,
+    mark: 'rgba(255,201,77,0.14)',
+    image: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=800&q=80',
   },
   {
     id: '2',
     title: 'Weekend flash deals',
     subtitle: 'Save on pantry staples from partner stores.',
-    cta: 'Shop Deals',
-    backgroundColor: colors.bannerOrange,
-    image:
-      'https://images.unsplash.com/photo-1606787366850-de6330120b65?w=800&q=80',
-    ctaStyle: 'lightOnDark',
+    cta: 'Shop deals',
+    bg: brand.butter,
+    fg: brand.ink,
+    ctaBg: brand.ink,
+    ctaFg: brand.cream,
+    mark: 'rgba(23,38,30,0.09)',
+    image: 'https://images.unsplash.com/photo-1606787366850-de6330120b65?w=800&q=80',
+  },
+  {
+    id: '3',
+    title: 'Grab it in minutes',
+    subtitle: 'Track your rider live from store to door.',
+    cta: 'Learn more',
+    bg: brand.sprout,
+    fg: brand.ink,
+    ctaBg: brand.ink,
+    ctaFg: brand.sprout,
+    mark: 'rgba(23,38,30,0.1)',
+    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80',
   },
 ];
 
+const AUTO_MS = 4500;
+
+/**
+ * Promo banners: swipe or let them auto-advance. The active dot fills like a story
+ * progress bar; touching the carousel pauses it. Cards behind the centre one sit back
+ * and their photos drift, so swiping feels layered.
+ */
 export function PromoBannerCarousel() {
+  const { width, gutter } = useLayout();
+  const reduced = useReducedMotion();
+  const cardW = Math.min(width - gutter * 2 - 16, 360);
+  const gap = spacing.md;
+  const step = cardW + gap;
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const progress = useRef(new Animated.Value(0)).current;
+  const listRef = useRef<ScrollView>(null);
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    if (paused || reduced) return;
+    progress.setValue(0);
+    const run = Animated.timing(progress, { toValue: 1, duration: AUTO_MS, useNativeDriver: true });
+    run.start(({ finished }) => {
+      if (!finished) return;
+      const next = (index + 1) % BANNERS.length;
+      listRef.current?.scrollTo({ x: next * step, animated: true });
+      setIndex(next);
+    });
+    return () => run.stop();
+  }, [index, paused, reduced, progress, step]);
+
   return (
-    <ScrollView
-      horizontal={true}
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.carousel}
-      decelerationRate="fast"
-      snapToInterval={316}
-    >
-      {BANNERS.map((b) => (
-        <View
-          key={b.id}
-          style={[styles.card, { backgroundColor: b.backgroundColor }]}
-        >
-          <View style={styles.textCol}>
-            <Text style={[styles.title, typography.bannerTitle]}>{b.title}</Text>
-            <Text style={[styles.subtitle, typography.bannerSubtitle]}>
-              {b.subtitle}
-            </Text>
-            <Pressable
+    <View style={[styles.wrap, { marginHorizontal: -gutter }]}>
+      <Animated.ScrollView
+        ref={listRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: gutter, gap }}
+        decelerationRate="fast"
+        snapToInterval={step}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], { useNativeDriver: true })}
+        onScrollBeginDrag={() => setPaused(true)}
+        onMomentumScrollEnd={(e) => {
+          const i = Math.max(0, Math.min(BANNERS.length - 1, Math.round(e.nativeEvent.contentOffset.x / step)));
+          setIndex(i);
+          setPaused(false);
+        }}
+        scrollEventThrottle={16}
+      >
+        {BANNERS.map((b, i) => {
+          const input = [(i - 1) * step, i * step, (i + 1) * step];
+          return (
+            <Animated.View
+              key={b.id}
               style={[
-                styles.cta,
-                b.ctaStyle === 'darkOnLight'
-                  ? styles.ctaLight
-                  : styles.ctaDark,
+                styles.card,
+                {
+                  width: cardW,
+                  backgroundColor: b.bg,
+                  transform: [{ scale: scrollX.interpolate({ inputRange: input, outputRange: [0.94, 1, 0.94], extrapolate: 'clamp' }) }],
+                },
               ]}
-              onPress={() =>
-                Alert.alert(b.cta, 'Promo applied to your next order (demo).')
-              }
             >
-              <Text
+              <Animated.View
                 style={[
-                  styles.ctaText,
-                  b.ctaStyle === 'darkOnLight'
-                    ? styles.ctaTextDark
-                    : styles.ctaTextLight,
+                  styles.mark,
+                  {
+                    transform: [
+                      { rotate: scrollX.interpolate({ inputRange: input, outputRange: ['-25deg', '0deg', '25deg'], extrapolate: 'clamp' }) },
+                    ],
+                  },
                 ]}
               >
-                {b.cta}
-              </Text>
+                <GrabitMark size={190} variant="mono" color={b.mark} />
+              </Animated.View>
+              <View style={styles.textCol}>
+                <Text maxFontSizeMultiplier={1.25} style={[styles.title, { color: b.fg }]}>{b.title}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, { color: b.fg }]}>{b.subtitle}</Text>
+                <PressableScale
+                  hapticFeedback
+                  onPress={() => appAlert(b.cta, 'Promo applied to your next order (demo).')}
+                  style={[styles.cta, { backgroundColor: b.ctaBg }]}
+                  accessibilityRole="button"
+                >
+                  <Text maxFontSizeMultiplier={1.25} style={[styles.ctaText, { color: b.ctaFg }]}>{b.cta}</Text>
+                </PressableScale>
+              </View>
+              <Animated.Image
+                source={{ uri: b.image }}
+                style={[
+                  styles.image,
+                  {
+                    transform: [
+                      { translateX: scrollX.interpolate({ inputRange: input, outputRange: [-24, 0, 24], extrapolate: 'clamp' }) },
+                      { rotate: scrollX.interpolate({ inputRange: input, outputRange: ['-12deg', '0deg', '12deg'], extrapolate: 'clamp' }) },
+                    ],
+                  },
+                ]}
+              />
+            </Animated.View>
+          );
+        })}
+      </Animated.ScrollView>
+      <View style={styles.dots}>
+        {BANNERS.map((b, i) =>
+          i === index ? (
+            <View key={b.id} style={styles.track}>
+              <Animated.View
+                style={[
+                  styles.fill,
+                  {
+                    transform: [
+                      { translateX: progress.interpolate({ inputRange: [0, 1], outputRange: [-TRACK_W, 0] }) },
+                    ],
+                  },
+                  (paused || reduced) && { transform: [{ translateX: 0 }] },
+                ]}
+              />
+            </View>
+          ) : (
+            <Pressable
+              key={b.id}
+              hitSlop={8}
+              accessibilityLabel={`Show promo ${i + 1}`}
+              onPress={() => {
+                listRef.current?.scrollTo({ x: i * step, animated: true });
+                setIndex(i);
+              }}
+            >
+              <View style={styles.dot} />
             </Pressable>
-          </View>
-          <View style={styles.imageCol}>
-            <Image source={{ uri: b.image }} style={styles.bannerImage} />
-          </View>
-        </View>
-      ))}
-    </ScrollView>
+          ),
+        )}
+      </View>
+    </View>
   );
 }
 
-const CARD_W = 300;
+const TRACK_W = 26;
 
 const styles = StyleSheet.create({
-  carousel: {
-    paddingBottom: spacing.lg,
-    gap: spacing.md,
-  },
+  wrap: { marginBottom: spacing.xl },
   card: {
-    width: CARD_W,
-    minHeight: 140,
-    borderRadius: radii.lg,
+    minHeight: 160,
+    borderRadius: radii.xl,
     flexDirection: 'row',
     overflow: 'hidden',
-    padding: spacing.lg,
+    padding: spacing.lg + 2,
   },
-  textCol: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingRight: spacing.sm,
+  mark: { position: 'absolute', right: -50, bottom: -60 },
+  textCol: { flex: 1, justifyContent: 'center', paddingRight: spacing.sm },
+  title: { fontFamily: fonts.display, fontSize: 21, lineHeight: 24, letterSpacing: -0.2, marginBottom: spacing.xs },
+  subtitle: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, opacity: 0.9, marginBottom: spacing.md },
+  cta: { alignSelf: 'flex-start', paddingVertical: spacing.sm + 1, paddingHorizontal: spacing.lg, borderRadius: radii.pill },
+  ctaText: { fontFamily: fonts.bold, fontSize: 14 },
+  image: {
+    width: 92,
+    height: 92,
+    borderRadius: 46,
+    alignSelf: 'flex-end',
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.85)',
   },
-  title: {
-    color: colors.surface,
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    color: 'rgba(255,255,255,0.9)',
-    marginBottom: spacing.md,
-    lineHeight: 18,
-  },
-  cta: {
-    alignSelf: 'flex-start',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radii.md,
-  },
-  ctaLight: {
-    backgroundColor: colors.surface,
-  },
-  ctaDark: {
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
-  },
-  ctaText: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  ctaTextDark: {
-    color: colors.text,
-  },
-  ctaTextLight: {
-    color: colors.surface,
-  },
-  imageCol: {
-    width: 88,
-    justifyContent: 'flex-end',
-  },
-  bannerImage: {
-    width: 88,
-    height: 88,
-    borderRadius: radii.md,
-  },
+  dots: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: spacing.md },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: brand.greenDeep, opacity: 0.3 },
+  track: { width: TRACK_W, height: 6, borderRadius: 3, backgroundColor: 'rgba(14,124,74,0.2)', overflow: 'hidden' },
+  fill: { width: TRACK_W, height: 6, borderRadius: 3, backgroundColor: brand.greenDeep },
 });

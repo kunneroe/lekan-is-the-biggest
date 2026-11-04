@@ -3,6 +3,8 @@ import type { Ionicons } from '@expo/vector-icons';
 /** Backend PaymentMethod enum values used at checkout. */
 export type BackendPaymentMethod = 'CARD' | 'BANK_TRANSFER' | 'PAY_ON_DELIVERY';
 
+export type SupermarketStatus = 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+
 export type ApiSupermarket = {
   id: string;
   name: string;
@@ -17,6 +19,7 @@ export type ApiSupermarket = {
   area?: string | null;
   city?: string | null;
   state?: string | null;
+  status?: SupermarketStatus | null;
 };
 
 export type ApiProduct = {
@@ -47,18 +50,36 @@ export type ApiCartItem = {
 };
 
 const CATEGORY_ICON_BY_SLUG: Record<string, keyof typeof Ionicons.glyphMap> = {
-  groceries: 'basket-outline',
-  drinks: 'wine-outline',
-  snacks: 'fast-food-outline',
-  toiletries: 'color-filter-outline',
-  household: 'home-outline',
-  'frozen-foods': 'snow-outline',
-  frozen: 'snow-outline',
-  'baby-products': 'balloon-outline',
-  baby: 'balloon-outline',
-  'cleaning-items': 'brush-outline',
-  cleaning: 'brush-outline',
-  'personal-care': 'heart-outline',
+  groceries: 'nutrition',
+  drinks: 'beer',
+  snacks: 'ice-cream',
+  toiletries: 'water',
+  household: 'home',
+  'frozen-foods': 'snow',
+  frozen: 'snow',
+  'baby-products': 'happy',
+  baby: 'happy',
+  'cleaning-items': 'sparkles',
+  cleaning: 'sparkles',
+  'personal-care': 'flower',
+};
+
+// Inlined here (same values as theme/categoryColors) to avoid a circular import
+// between theme/index.ts and this utility file.
+const CATEGORY_COLOR_BY_SLUG: Record<string, { bg: string; icon: string }> = {
+  groceries:        { bg: '#E3F2E1', icon: '#1F6B3A' },
+  drinks:           { bg: '#FDECD8', icon: '#A85A16' },
+  snacks:           { bg: '#FFF1CC', icon: '#946200' },
+  toiletries:       { bg: '#FBE7EC', icon: '#A33A62' },
+  household:        { bg: '#E3EEF7', icon: '#245E88' },
+  frozen:           { bg: '#E2F2F6', icon: '#1F6C80' },
+  'frozen-foods':   { bg: '#E2F2F6', icon: '#1F6C80' },
+  baby:             { bg: '#EFE7F7', icon: '#5E3F8A' },
+  'baby-products':  { bg: '#EFE7F7', icon: '#5E3F8A' },
+  cleaning:         { bg: '#FFE8E1', icon: '#B23E1E' },
+  'cleaning-items': { bg: '#FFE8E1', icon: '#B23E1E' },
+  'personal-care':  { bg: '#FBE7EC', icon: '#A33A62' },
+  default:          { bg: '#F3EBDD', icon: '#4A6357' },
 };
 
 const PAYMENT_METHOD_MAP: Record<string, BackendPaymentMethod> = {
@@ -132,13 +153,19 @@ export function parseCategoriesResponse(data: unknown): ApiCategory[] {
 export function getCategoryIcon(
   slug: string,
 ): keyof typeof Ionicons.glyphMap {
-  return CATEGORY_ICON_BY_SLUG[slug.toLowerCase()] ?? 'grid-outline';
+  return CATEGORY_ICON_BY_SLUG[slug.toLowerCase()] ?? 'grid';
+}
+
+export function getCategoryColor(slug: string): { bg: string; icon: string } {
+  return CATEGORY_COLOR_BY_SLUG[slug.toLowerCase()] ?? CATEGORY_COLOR_BY_SLUG.default;
 }
 
 export function toCategoryGridItems(categories: ApiCategory[]) {
   return categories.map((cat) => ({
     id: cat.id,
     name: cat.name,
+    slug: cat.slug,
     icon: getCategoryIcon(cat.slug),
+    color: getCategoryColor(cat.slug),
   }));
 }

@@ -1,149 +1,182 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../navigation/navigationRef';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GrabitLoader, LoaderView } from '../../components/brand/GrabitLoader';
+import { EmptyState } from '../../components/common/EmptyState';
+import { FadeInUp } from '../../components/motion/FadeInUp';
+import { PressableScale } from '../../components/motion/PressableScale';
 import { ProductImage } from '../../components/ProductImage';
-
-import { getCategoryLabel, getProductById } from '../../data/products';
-import { navigateRoot } from '../../navigation/navigationRef';
-import { colors, radii, shadows, spacing, typography } from '../../theme';
+import { appAlert } from '../../context/DialogContext';
+import { useFavorites } from '../../context/FavoriteContext';
+import { showToast } from '../../context/ToastContext';
+import { navigateRoot, type RootStackParamList } from '../../navigation/navigationRef';
+import { cartService } from '../../services/cartService';
+import { brand, colors, fonts, radii, shadows, spacing } from '../../theme';
+import { getProductImageUrl } from '../../utils/catalogFormat';
+import { haptic } from '../../utils/haptics';
+import { parseApiError } from '../../utils/parseApiError';
+import { useLayout } from '../../utils/responsive';
 
 export function FavoritesScreen() {
   const insets = useSafeAreaInsets();
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const favoriteIds = new Set<string>();
-  const toggleFavorite = (id: string) => {};
-  const addToCart = async (storeId: string, product: any, qty: number) => {};
-  const products = [...favoriteIds]
-    .map((id) => getProductById(id))
-    .filter(Boolean);
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { favorites, loading, toggleFavorite } = useFavorites();
+  const { gutter } = useLayout();
+  const [addingId, setAddingId] = useState<string | null>(null);
+
+  if (loading) {
+    return <LoaderView />;
+  }
+
+  const handleAddToCart = async (productId: string, name: string) => {
+    if (addingId) return;
+    setAddingId(productId);
+    try {
+      await cartService.addItem(productId, 1);
+      haptic.success();
+      showToast(`${name} added`, {
+        action: { label: 'View cart', onPress: () => navigation.navigate('MainTabs', { screen: 'Cart' }) },
+      });
+    } catch (error: unknown) {
+      appAlert(
+        'Unable to Add to Cart',
+        parseApiError(error, {
+          fallback: 'Failed to add item to cart. Make sure you only add items from one supermarket.',
+        }),
+      );
+    } finally {
+      setAddingId(null);
+    }
+  };
+
+  if (favorites.length === 0) {
+    return (
+      <View style={[styles.screen, { justifyContent: 'center' }]}>
+        <EmptyState
+          art="bag"
+          title="No favorites yet"
+          body="Tap the heart on any product and it will wait for you here, ready to grab again."
+          actionLabel="Explore products"
+          onAction={() => navigation.navigate('MainTabs', { screen: 'Home' })}
+        />
+      </View>
+    );
+  }
 
   return (
     <ScrollView
-      contentContainerStyle={{
-        flexGrow: 1,
-        padding: spacing.xl,
-        paddingBottom: insets.bottom + spacing.xxl,
-      }}
+      style={styles.screen}
+      contentContainerStyle={{ padding: gutter, paddingBottom: insets.bottom + spacing.xxl }}
+      showsVerticalScrollIndicator={false}
     >
-      {products.length === 0 ? (
-        <View style={styles.emptyWrap}>
-          <Ionicons name="heart-outline" size={64} color={colors.textMuted} />
-          <Text style={styles.emptyTitle}>No favorites yet</Text>
-          <Text style={styles.emptySub}>
-            Save items you love by tapping the heart on any product. They will
-            appear here for quick add-to-cart.
-          </Text>
-          <Pressable
-            style={styles.emptyBtn}
-            onPress={() =>
-              navigation.navigate('MainTabs', { screen: 'Home' })
-            }
-          >
-            <Text style={styles.emptyBtnTxt}>Explore products</Text>
-          </Pressable>
-        </View>
-      ) : null}
-      {products.map((p) =>
-        p ? (
-          <View key={p.id} style={styles.card}>
-            <Pressable
-              style={styles.row}
-              onPress={() =>
-                navigateRoot('ProductDetail', {
-                  storeId: p.storeId,
-                  productId: p.id,
-                })
-              }
-            >
-              <ProductImage uri={p.image} style={styles.img} label={p.name} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.name}>{p.name}</Text>
-                <Text style={styles.cat}>{getCategoryLabel(p.categoryId)}</Text>
-                <Text style={styles.price}>₦{Number(p.price || 0).toLocaleString()}</Text>
-              </View>
-            </Pressable>
-            <View style={styles.actions}>
-              <Pressable onPress={() => toggleFavorite(p.id)} hitSlop={12}>
-                <Ionicons name="heart" size={22} color={colors.danger} />
-              </Pressable>
-              <Pressable
-                style={styles.add}
-                onPress={() => {
-                  addToCart(p.storeId, p, 1);
-                }}
+      <Text style={styles.count}>
+        {favorites.length} saved {favorites.length === 1 ? 'item' : 'items'}
+      </Text>
+      <View style={styles.grid}>
+        {favorites.map((fav, i) => {
+          const p = fav.product;
+          const storeId = p.supermarket?.id ?? p.supermarketId;
+          return (
+            <FadeInUp key={fav.id} index={i} style={styles.cell}>
+              <PressableScale
+                scaleTo={0.97}
+                style={styles.card}
+                onPress={() => navigateRoot('ProductDetail', { storeId: storeId ?? '', productId: p.id })}
+                accessibilityRole="button"
+                accessibilityLabel={p.name}
               >
-                <Ionicons name="cart" size={18} color={colors.surface} />
-                <Text style={styles.addTxt}>Add</Text>
-              </Pressable>
-            </View>
-          </View>
-        ) : null,
-      )}
+                <View>
+                  <ProductImage uri={getProductImageUrl(p)} style={styles.img} label={p.name} />
+                  <HeartButton onPress={() => void toggleFavorite(p.id)} />
+                </View>
+                <Text style={styles.name} numberOfLines={2}>
+                  {p.name}
+                </Text>
+                {p.supermarket?.name ? (
+                  <Text style={styles.store} numberOfLines={1}>
+                    {p.supermarket.name}
+                  </Text>
+                ) : null}
+                <View style={styles.priceRow}>
+                  <Text style={styles.price}>₦{Number(p.price || 0).toLocaleString()}</Text>
+                  <PressableScale
+                    scaleTo={0.85}
+                    hapticFeedback
+                    style={styles.add}
+                    onPress={() => void handleAddToCart(p.id, p.name)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Add ${p.name} to cart`}
+                  >
+                    {addingId === p.id ? (
+                      <GrabitLoader size={20} variant="reverse" />
+                    ) : (
+                      <Ionicons name="add" size={22} color="#FFFFFF" />
+                    )}
+                  </PressableScale>
+                </View>
+              </PressableScale>
+            </FadeInUp>
+          );
+        })}
+      </View>
     </ScrollView>
   );
 }
 
+/** Filled heart; tapping it pops and removes the item from favorites. */
+function HeartButton({ onPress }: { onPress: () => void }) {
+  const s = useRef(new Animated.Value(1)).current;
+  return (
+    <Pressable
+      onPress={() => {
+        haptic.tap();
+        s.setValue(0.6);
+        Animated.spring(s, { toValue: 1, friction: 3, tension: 200, useNativeDriver: true }).start();
+        onPress();
+      }}
+      hitSlop={8}
+      style={styles.heart}
+      accessibilityRole="button"
+      accessibilityLabel="Remove from favorites"
+    >
+      <Animated.View style={{ transform: [{ scale: s }] }}>
+        <Ionicons name="heart" size={18} color={brand.green} />
+      </Animated.View>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  emptyWrap: {
-    flex: 1,
+  screen: { flex: 1, backgroundColor: colors.background },
+  count: { fontFamily: fonts.semibold, fontSize: 13, color: colors.textSecondary, marginBottom: spacing.md },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  cell: { width: '48%', marginBottom: spacing.md },
+  card: { backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.sm, ...shadows.soft },
+  img: { width: '100%', height: 120, borderRadius: radii.md },
+  heart: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.overlayWhite,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.xxxl,
-    paddingHorizontal: spacing.md,
   },
-  emptyTitle: {
-    ...typography.sectionTitle,
-    marginTop: spacing.lg,
-    color: colors.text,
-    textAlign: 'center',
-  },
-  emptySub: {
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-    lineHeight: 22,
-    maxWidth: 320,
-  },
-  emptyBtn: {
-    marginTop: spacing.xl,
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.xxl,
-    paddingVertical: spacing.lg,
-    borderRadius: radii.md,
-  },
-  emptyBtnTxt: { color: colors.surface, fontWeight: '800' },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    marginBottom: spacing.lg,
-    overflow: 'hidden',
-    ...shadows.soft,
-  },
-  row: { flexDirection: 'row', gap: spacing.md, padding: spacing.lg },
-  img: { width: 88, height: 88, borderRadius: radii.md },
-  name: { fontWeight: '800', color: colors.text },
-  cat: { color: colors.textSecondary, fontSize: 12, marginTop: 4 },
-  price: { fontWeight: '800', color: colors.primary, marginTop: spacing.sm },
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    gap: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
-  },
+  name: { fontFamily: fonts.bold, fontSize: 14, color: colors.text, marginTop: spacing.sm, minHeight: 38, paddingHorizontal: 4 },
+  store: { fontFamily: fonts.regular, fontSize: 12, color: colors.textSecondary, paddingHorizontal: 4 },
+  priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.sm, paddingLeft: 4 },
+  price: { fontFamily: fonts.display, fontSize: 17, color: colors.text },
   add: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  addTxt: { color: colors.surface, fontWeight: '800' },
 });

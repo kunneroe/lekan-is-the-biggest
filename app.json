@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "goshop",
+    "name": "Grabit",
     "slug": "goshop",
+    "owner": "goshop123",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,21 +11,41 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0E7C4A"
     },
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "package": "com.grocr.goshop",
+      "versionCode": 2,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0E7C4A"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#0E7C4A"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "7ebe610f-1df1-4c44-9608-9460d9b30157"
+      }
+    },
+    "backgroundColor": "#FFF6EA"
   }
 }

@@ -1,13 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ProductImage } from '../components/ProductImage';
 import { useEffect, useState } from 'react';
+import { LoaderView } from '../components/brand/GrabitLoader';
+import { EmptyState } from '../components/common/EmptyState';
+import { PrimaryButton } from '../components/common/PrimaryButton';
+import { BagCelebration } from '../components/motion/BagCelebration';
+import { FadeInUp } from '../components/motion/FadeInUp';
+import { ProductImage } from '../components/ProductImage';
 import { orderService } from '../services/orderService';
 import type { RootStackParamList } from '../navigation/navigationRef';
-import { colors, radii, spacing, typography } from '../theme';
+import { brand, colors, fonts, radii, shadows, spacing } from '../theme';
 
 type R = RouteProp<RootStackParamList, 'OrderSuccess'>;
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -19,10 +24,14 @@ export function OrderSuccessScreen() {
   const { orderId } = route.params;
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { width } = useWindowDimensions();
+  // the celebration stage is 300pt wide: shrink it on narrow phones so nothing is cut
+  const bagScale = Math.min(1, (width - spacing.xl * 2) / 300);
 
   useEffect(() => {
-    orderService.getOrderById(orderId)
-      .then(res => {
+    orderService
+      .getOrderById(orderId)
+      .then((res) => {
         setOrder(res.order || res);
       })
       .catch(() => {})
@@ -30,138 +39,111 @@ export function OrderSuccessScreen() {
   }, [orderId]);
 
   if (loading) {
-    return (
-      <View style={styles.miss}>
-        <Text>Loading...</Text>
-      </View>
-    );
+    return <LoaderView label="Confirming your order…" />;
   }
 
   if (!order) {
     return (
-      <View style={styles.miss}>
-        <Text>Order not found.</Text>
-        <Pressable onPress={() => navigation.navigate('MainTabs')}>
-          <Text style={styles.link}>Home</Text>
-        </Pressable>
+      <View style={[styles.screen, { justifyContent: 'center' }]}>
+        <EmptyState art="mark" title="Order not found" actionLabel="Home" onAction={() => navigation.navigate('MainTabs')} />
       </View>
     );
   }
 
   const lines = order.lines || order.items || [];
-  const thumb = lines[0]?.product?.image || 'https://via.placeholder.com/100';
+  const thumb = lines[0]?.product?.image || lines[0]?.product?.imageUrl || lines[0]?.productImageUrl || null;
   const name0 = lines[0]?.product?.name ?? 'Items';
+  const storeShort = (order.storeName || order.supermarket?.name || '').split(' ')[0];
+  const REVEAL = 1900;
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top + spacing.xl }]}>
-      <View style={styles.checkWrap}>
-        <View style={styles.checkOuter}>
-          <Ionicons name="checkmark" size={48} color={colors.surface} />
-        </View>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={{ paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.xl, paddingHorizontal: spacing.xl }}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={[styles.stage, { transform: [{ scale: bagScale }], marginBottom: spacing.lg - 280 * (1 - bagScale) }]}>
+        <BagCelebration />
       </View>
-      <Text style={styles.title}>Order placed successfully!</Text>
-      <Text style={styles.sub}>
-        Your items from <Text style={styles.bold}>{(order.storeName || order.supermarket?.name || '').split(' ')[0]}</Text> are
-        being prepared. Estimated delivery:{' '}
-        <Text style={styles.bold}>{order.etaMins || 15} mins.</Text>
-      </Text>
-      <View style={styles.card}>
-        <ProductImage uri={thumb} style={styles.thumb} label={name0} />
-        <View style={{ flex: 1 }}>
-          <Text style={styles.oid}>#{order.id}</Text>
-          <Text style={styles.sum}>
-            {(order.lines || order.items || []).length} items · ₦{Number(order.total || 0).toLocaleString()}
-          </Text>
-          <Text style={styles.eta}>
-            <Ionicons name="bicycle" size={14} color={colors.primary} /> Arriving soon
-          </Text>
+
+      <FadeInUp delay={REVEAL}>
+        <Text maxFontSizeMultiplier={1.25} style={styles.title}>Order grabbed!</Text>
+        <Text style={styles.sub}>
+          {storeShort ? (
+            <>
+              <Text style={styles.bold}>{storeShort}</Text> is packing your bag now.{' '}
+            </>
+          ) : (
+            'We’re packing your bag now. '
+          )}
+          Estimated delivery <Text style={styles.bold}>{order.etaMins || 15} mins</Text>.
+        </Text>
+      </FadeInUp>
+
+      <FadeInUp delay={REVEAL + 120}>
+        <View style={styles.card}>
+          <ProductImage uri={thumb} style={styles.thumb} label={name0} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.oid} numberOfLines={1}>
+              Order #{order.id}
+            </Text>
+            <Text maxFontSizeMultiplier={1.25} style={styles.sum}>
+              {lines.length} items · ₦{Number(order.total || order.totalAmount || 0).toLocaleString()}
+            </Text>
+            <View style={styles.etaRow}>
+              <View style={styles.liveDot} />
+              <Text style={styles.eta}>Arriving soon</Text>
+            </View>
+          </View>
         </View>
-      </View>
-      <Pressable
-        style={styles.primary}
-        onPress={() => navigation.navigate('TrackOrder', { orderId: order.id })}
-      >
-        <Ionicons name="navigate" size={20} color={colors.surface} />
-        <Text style={styles.primaryTxt}>Track order</Text>
-      </Pressable>
-      <Pressable
-        style={styles.secondary}
-        onPress={() => navigation.navigate('MainTabs')}
-      >
-        <Ionicons name="home-outline" size={20} color={colors.primary} />
-        <Text style={styles.secondaryTxt}>Back to home</Text>
-      </Pressable>
-    </View>
+      </FadeInUp>
+
+      <FadeInUp delay={REVEAL + 220} style={{ gap: spacing.md }}>
+        <PrimaryButton
+          label="Track order"
+          icon="navigate"
+          onPress={() => navigation.navigate('TrackOrder', { orderId: order.id })}
+        />
+        <PrimaryButton label="Keep shopping" variant="secondary" onPress={() => navigation.navigate('MainTabs')} />
+      </FadeInUp>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.xl,
-  },
-  miss: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  link: { color: colors.primary, marginTop: spacing.md },
-  checkWrap: { alignItems: 'center', marginBottom: spacing.xl },
-  checkOuter: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  screen: { flex: 1, backgroundColor: colors.background },
+  stage: { alignItems: 'center', marginBottom: spacing.lg },
   title: {
-    fontSize: 22,
-    fontWeight: '800',
+    fontFamily: fonts.display,
+    fontSize: 34,
+    letterSpacing: -0.2,
     color: colors.text,
     textAlign: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   sub: {
-    ...typography.body,
+    fontFamily: fonts.regular,
+    fontSize: 16,
     textAlign: 'center',
     color: colors.textSecondary,
-    lineHeight: 22,
+    lineHeight: 23,
     marginBottom: spacing.xl,
   },
-  bold: { fontWeight: '800', color: colors.primary },
+  bold: { fontFamily: fonts.bold, color: colors.text },
   card: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.md,
     padding: spacing.lg,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.mint,
-    marginBottom: spacing.xl,
-  },
-  thumb: { width: 64, height: 64, borderRadius: radii.sm },
-  oid: { fontSize: 11, color: colors.textMuted, textTransform: 'uppercase' },
-  sum: { fontWeight: '800', color: colors.text, marginTop: 4 },
-  eta: { color: colors.primary, fontStyle: 'italic', marginTop: 8, fontSize: 13 },
-  primary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.lg,
-    borderRadius: radii.md,
-    marginBottom: spacing.md,
-  },
-  primaryTxt: { color: colors.surface, fontWeight: '800', fontSize: 16 },
-  secondary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: spacing.lg,
-    borderRadius: radii.md,
+    borderRadius: radii.xl,
     backgroundColor: colors.surface,
+    marginBottom: spacing.xl,
+    ...shadows.soft,
   },
-  secondaryTxt: { color: colors.primary, fontWeight: '700' },
+  thumb: { width: 64, height: 64, borderRadius: radii.md },
+  oid: { fontFamily: fonts.medium, fontSize: 12, color: colors.textMuted },
+  sum: { fontFamily: fonts.display, fontSize: 17, color: colors.text, marginTop: 4 },
+  etaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: brand.butter },
+  eta: { fontFamily: fonts.semibold, color: colors.primary, fontSize: 13 },
 });

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import type { ComponentProps } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { colors, radii, spacing } from '../../theme';
+import { useRef, useState, type ComponentProps } from 'react';
+import { Animated, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { brand, colors, fonts, radii, spacing } from '../../theme';
 
 export type AuthFieldVariant = 'mintBorder' | 'mintFlat' | 'outlined';
 
@@ -16,10 +16,13 @@ type Props = {
   autoCapitalize?: ComponentProps<typeof TextInput>['autoCapitalize'];
   onToggleSecure?: () => void;
   secureVisible?: boolean;
-  /** Login: light mint + hairline border. Register: mint fill, no border. Forgot: white + border. */
+  /** Kept for compatibility — every variant now uses the Grabit field style. */
   variant?: AuthFieldVariant;
+  /** outline the field in red (e.g. after a wrong password) */
+  error?: boolean;
 };
 
+/** Labelled field; the border glows Basil and the icon turns green while focused. */
 export function AuthTextField({
   label,
   icon,
@@ -31,19 +34,29 @@ export function AuthTextField({
   autoCapitalize,
   onToggleSecure,
   secureVisible,
-  variant = 'mintBorder',
+  error = false,
 }: Props) {
-  const rowStyle = [
-    styles.row,
-    variant === 'mintFlat' && styles.rowMintFlat,
-    variant === 'outlined' && styles.rowOutlined,
-  ];
+  const [focused, setFocused] = useState(false);
+  const focus = useRef(new Animated.Value(0)).current;
+
+  const animate = (to: number) =>
+    Animated.timing(focus, { toValue: to, duration: 180, useNativeDriver: false }).start();
 
   return (
     <View style={styles.wrap}>
       <Text style={styles.label}>{label}</Text>
-      <View style={rowStyle}>
-        <Ionicons name={icon} size={20} color={colors.textMuted} />
+      <Animated.View
+        style={[
+          styles.row,
+          {
+            borderColor: error
+              ? colors.danger
+              : focus.interpolate({ inputRange: [0, 1], outputRange: [colors.border, brand.green] }),
+            backgroundColor: focus.interpolate({ inputRange: [0, 1], outputRange: [colors.surfaceAlt, colors.surface] }),
+          },
+        ]}
+      >
+        <Ionicons name={icon} size={20} color={error ? colors.danger : focused ? brand.green : colors.textMuted} />
         <TextInput
           style={styles.input}
           placeholder={placeholder}
@@ -53,53 +66,42 @@ export function AuthTextField({
           secureTextEntry={secureTextEntry && !secureVisible}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize ?? 'none'}
+          accessibilityLabel={label}
+          onFocus={() => {
+            setFocused(true);
+            animate(1);
+          }}
+          onBlur={() => {
+            setFocused(false);
+            animate(0);
+          }}
         />
         {onToggleSecure ? (
-          <Pressable onPress={onToggleSecure} hitSlop={12}>
-            <Ionicons
-              name={secureVisible ? 'eye-off-outline' : 'eye-outline'}
-              size={22}
-              color={colors.textMuted}
-            />
+          <Pressable
+            onPress={onToggleSecure}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel={secureVisible ? 'Hide password' : 'Show password'}
+          >
+            <Ionicons name={secureVisible ? 'eye-off-outline' : 'eye-outline'} size={22} color={colors.textMuted} />
           </Pressable>
         ) : null}
-      </View>
+      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: { marginBottom: spacing.lg },
-  label: {
-    fontWeight: '700',
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
-    fontSize: 13,
-  },
+  label: { fontFamily: fonts.bold, color: colors.text, marginBottom: spacing.sm, fontSize: 13 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.mint,
-    borderRadius: radii.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderRadius: radii.lg,
+    borderWidth: 1.5,
     paddingHorizontal: spacing.lg,
-    minHeight: 52,
+    minHeight: 54,
   },
-  rowMintFlat: {
-    borderWidth: 0,
-    backgroundColor: '#EEF5F0',
-  },
-  rowOutlined: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  input: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    fontSize: 16,
-    color: colors.text,
-  },
+  input: { flex: 1, paddingVertical: spacing.md, fontSize: 16, color: colors.text, fontFamily: fonts.regular },
 });
