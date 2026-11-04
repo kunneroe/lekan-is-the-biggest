@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, FlatList, StyleSheet } from 'react-native';
+import { FlatList, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -13,6 +13,7 @@ import { colors, spacing } from '../theme';
 import { parseApiError } from '../utils/parseApiError';
 import type { ApiSupermarket } from '../utils/catalogFormat';
 
+import { appAlert } from '../context/DialogContext';
 export function AllSupermarketsScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -29,7 +30,7 @@ export function AllSupermarketsScreen() {
         const msg = parseApiError(error, {
           fallback: 'Failed to load supermarkets. Please try again.',
         });
-        Alert.alert('Unable to Load Stores', msg);
+        appAlert('Unable to Load Stores', msg);
       } finally {
         setLoading(false);
       }

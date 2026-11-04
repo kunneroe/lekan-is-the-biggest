@@ -41,7 +41,7 @@ export function HomeSearchBar({
         accessibilityRole="button"
         accessibilityLabel={filterActive ? 'Filters, active' : 'Filters'}
       >
-        <Ionicons name="options" size={22} color={brand.forest} />
+        <Ionicons name="options" size={22} color={brand.ink} />
         {filterActive && <View style={styles.activeDot} />}
       </Pressable>
     </View>
@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: radii.lg,
-    backgroundColor: brand.lime,
+    backgroundColor: brand.butter,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -79,6 +79,6 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: brand.tomato,
     borderWidth: 2,
-    borderColor: brand.lime,
+    borderColor: brand.butter,
   },
 });

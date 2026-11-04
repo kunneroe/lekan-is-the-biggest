@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   },
   pill: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.mint,
+    backgroundColor: colors.tint,
     borderRadius: radii.lg,
   },
   tabLabel: { marginTop: 3, fontFamily: fonts.bold, fontSize: 11 },
@@ -238,12 +238,12 @@ const styles = StyleSheet.create({
     minWidth: 19,
     height: 19,
     borderRadius: 10,
-    backgroundColor: brand.tomato,
+    backgroundColor: brand.butter,
     borderWidth: 2,
     borderColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 3,
   },
-  badgeText: { color: brand.forest, fontSize: 10, fontFamily: fonts.black },
+  badgeText: { color: brand.ink, fontSize: 10, fontFamily: fonts.black },
 });

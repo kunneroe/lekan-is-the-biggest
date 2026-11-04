@@ -12,16 +12,16 @@ const CHECK_LEN = 110;
 
 /** Bits that burst out from behind the bag when the check lands. */
 const CONFETTI = [
-  { dx: -160, dy: -40, c: brand.tomato, s: 14, r: 7 },
-  { dx: -120, dy: -130, c: brand.lime, s: 12, r: 3 },
-  { dx: -50, dy: -180, c: brand.basil, s: 14, r: 7 },
+  { dx: -160, dy: -40, c: brand.butter, s: 14, r: 7 },
+  { dx: -120, dy: -130, c: brand.sprout, s: 12, r: 3 },
+  { dx: -50, dy: -180, c: brand.green, s: 14, r: 7 },
   { dx: 40, dy: -185, c: '#FFC92E', s: 14, r: 7 },
-  { dx: 115, dy: -140, c: brand.tomato, s: 12, r: 6 },
-  { dx: 165, dy: -50, c: brand.lime, s: 12, r: 3 },
-  { dx: 150, dy: 60, c: brand.basil, s: 12, r: 6 },
+  { dx: 115, dy: -140, c: brand.butter, s: 12, r: 6 },
+  { dx: 165, dy: -50, c: brand.sprout, s: 12, r: 3 },
+  { dx: 150, dy: 60, c: brand.green, s: 12, r: 6 },
   { dx: -150, dy: 70, c: '#FFC92E', s: 12, r: 3 },
-  { dx: -175, dy: -100, c: brand.tomato, s: 10, r: 5 },
-  { dx: 175, dy: -115, c: brand.basil, s: 10, r: 5 },
+  { dx: -175, dy: -100, c: brand.butter, s: 10, r: 5 },
+  { dx: 175, dy: -115, c: brand.green, s: 10, r: 5 },
 ];
 
 type Props = { onDone?: () => void };
@@ -137,8 +137,8 @@ export function BagCelebration({ onDone }: Props) {
 
       <Animated.View style={[styles.bag, bagStyle]}>
         <Svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={StyleSheet.absoluteFill}>
-          <Path d="M84 92C84 40 156 40 156 92" fill="none" stroke={brand.deepBasil} strokeWidth={12} strokeLinecap="round" />
-          <Rect x={40} y={86} width={160} height={150} rx={22} fill={brand.deepBasil} />
+          <Path d="M84 92C84 40 156 40 156 92" fill="none" stroke={brand.greenDeep} strokeWidth={12} strokeLinecap="round" />
+          <Rect x={40} y={86} width={160} height={150} rx={22} fill={brand.greenDeep} />
         </Svg>
 
         <Animated.View style={[StyleSheet.absoluteFill, dropStyle(items[0])]}>
@@ -151,8 +151,8 @@ export function BagCelebration({ onDone }: Props) {
         </Animated.View>
         <Animated.View style={[StyleSheet.absoluteFill, dropStyle(items[1])]}>
           <Svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
-            <Circle cx={88} cy={82} r={24} fill={brand.tomato} />
-            <Path d="M88 60C90 52 97 49 104 50C101 57 95 61 88 60Z" fill={brand.lime} />
+            <Circle cx={88} cy={82} r={24} fill={brand.butter} />
+            <Path d="M88 60C90 52 97 49 104 50C101 57 95 61 88 60Z" fill={brand.sprout} />
           </Svg>
         </Animated.View>
         <Animated.View style={[StyleSheet.absoluteFill, dropStyle(items[2])]}>
@@ -168,11 +168,11 @@ export function BagCelebration({ onDone }: Props) {
         </Animated.View>
 
         <Svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={StyleSheet.absoluteFill}>
-          <Rect x={30} y={100} width={180} height={146} rx={26} fill={brand.basil} />
+          <Rect x={30} y={100} width={180} height={146} rx={26} fill={brand.green} />
           <AnimatedPath
             d="M86 172L110 196L156 148"
             fill="none"
-            stroke={brand.oat}
+            stroke={brand.cream}
             strokeWidth={16}
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     height: 300,
     borderRadius: 150,
     borderWidth: 4,
-    borderColor: brand.lime,
+    borderColor: brand.sprout,
   },
   bag: { width: W, height: H },
 });

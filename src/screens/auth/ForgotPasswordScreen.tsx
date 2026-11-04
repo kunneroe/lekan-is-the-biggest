@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 import { AuthSplitShell } from '../../components/auth/AuthSplitShell';
 import { AuthTextField } from '../../components/auth/AuthTextField';
 import { PrimaryButton } from '../../components/common/PrimaryButton';
@@ -9,6 +9,7 @@ import { PrimaryButton } from '../../components/common/PrimaryButton';
 import type { AuthStackParamList } from '../../navigation/AuthNavigator';
 import { colors, fonts, spacing } from '../../theme';
 
+import { appAlert } from '../../context/DialogContext';
 type Props = NativeStackScreenProps<AuthStackParamList, 'ForgotPassword'>;
 
 export function ForgotPasswordScreen({ navigation }: Props) {
@@ -20,7 +21,7 @@ export function ForgotPasswordScreen({ navigation }: Props) {
     setBusy(true);
     setTimeout(() => {
       setBusy(false);
-      Alert.alert(
+      appAlert(
         'Check your inbox',
         'If an account exists, a reset code would be sent (demo — no email sent).',
         [{ text: 'OK', onPress: () => navigation.navigate('Login') }],

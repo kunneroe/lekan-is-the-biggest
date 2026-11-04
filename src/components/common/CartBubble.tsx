@@ -87,11 +87,11 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     paddingHorizontal: 4,
-    backgroundColor: brand.tomato,
+    backgroundColor: brand.butter,
     borderWidth: 2,
     borderColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badgeTxt: { fontFamily: fonts.black, fontSize: 10, color: brand.forest },
+  badgeTxt: { fontFamily: fonts.black, fontSize: 10, color: brand.ink },
 });

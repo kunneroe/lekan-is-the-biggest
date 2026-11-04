@@ -6,10 +6,10 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { Alert } from 'react-native';
 import { favoriteService } from '../services/favoriteService';
 import { useAuth } from './AuthContext';
 
+import { appAlert } from './DialogContext';
 type FavoriteProduct = {
   id: string;
   name: string;
@@ -113,7 +113,7 @@ export function FavoriteProvider({ children }: { children: React.ReactNode }) {
           }
           return next;
         });
-        Alert.alert('Error', 'Could not update favorites. Please try again.');
+        appAlert('Error', 'Could not update favorites. Please try again.');
       }
     },
     [favoriteIds],

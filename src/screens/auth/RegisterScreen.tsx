@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AuthSplitShell } from '../../components/auth/AuthSplitShell';
 import { AuthTextField } from '../../components/auth/AuthTextField';
 import { PrimaryButton } from '../../components/common/PrimaryButton';
@@ -12,6 +12,7 @@ import { colors, fonts, radii, spacing } from '../../theme';
 import { haptic } from '../../utils/haptics';
 import { parseApiError } from '../../utils/parseApiError';
 
+import { appAlert } from '../../context/DialogContext';
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
 export function RegisterScreen({ navigation }: Props) {
@@ -29,12 +30,12 @@ export function RegisterScreen({ navigation }: Props) {
     if (busy) return;
     if (!name || !email || !password || !phone) {
       haptic.error();
-      Alert.alert('Error', 'Please fill out all fields.');
+      appAlert('Error', 'Please fill out all fields.');
       return;
     }
     if (password !== confirm) {
       haptic.error();
-      Alert.alert('Passwords', 'Passwords do not match.');
+      appAlert('Passwords', 'Passwords do not match.');
       return;
     }
     setBusy(true);
@@ -46,7 +47,7 @@ export function RegisterScreen({ navigation }: Props) {
       const msg = parseApiError(error, {
         fallback: 'Registration failed. Please try again.',
       });
-      Alert.alert('Registration Error', msg);
+      appAlert('Registration Error', msg);
     } finally {
       setBusy(false);
     }
@@ -68,7 +69,7 @@ export function RegisterScreen({ navigation }: Props) {
             <PressableScale
               containerStyle={{ flex: 1 }}
               style={styles.socialBtn}
-              onPress={() => Alert.alert('Google', 'Social sign-in is not connected in this demo.')}
+              onPress={() => appAlert('Google', 'Social sign-in is not connected in this demo.')}
               accessibilityRole="button"
               accessibilityLabel="Continue with Google"
             >
@@ -78,7 +79,7 @@ export function RegisterScreen({ navigation }: Props) {
             <PressableScale
               containerStyle={{ flex: 1 }}
               style={styles.socialBtn}
-              onPress={() => Alert.alert('Facebook', 'Social sign-in is not connected in this demo.')}
+              onPress={() => appAlert('Facebook', 'Social sign-in is not connected in this demo.')}
               accessibilityRole="button"
               accessibilityLabel="Continue with Facebook"
             >
@@ -148,11 +149,11 @@ export function RegisterScreen({ navigation }: Props) {
       </View>
       <Text style={styles.legal}>
         By signing up, you agree to our{' '}
-        <Text style={styles.legalBold} onPress={() => Alert.alert('Terms', 'Demo terms placeholder.')}>
+        <Text style={styles.legalBold} onPress={() => appAlert('Terms', 'Demo terms placeholder.')}>
           Terms
         </Text>{' '}
         and{' '}
-        <Text style={styles.legalBold} onPress={() => Alert.alert('Privacy', 'Demo privacy placeholder.')}>
+        <Text style={styles.legalBold} onPress={() => appAlert('Privacy', 'Demo privacy placeholder.')}>
           Privacy Policy
         </Text>
         .

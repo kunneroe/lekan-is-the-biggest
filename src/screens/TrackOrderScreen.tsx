@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRoute, type RouteProp, useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Easing, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, Easing, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { LoaderView } from '../components/brand/GrabitLoader';
@@ -18,6 +18,7 @@ import { brand, colors, fonts, radii, shadows, spacing } from '../theme';
 import { ease, useReducedMotion } from '../utils/motion';
 import { parseApiError } from '../utils/parseApiError';
 
+import { appAlert } from '../context/DialogContext';
 type R = RouteProp<RootStackParamList, 'TrackOrder'>;
 
 const MAP_H = 250;
@@ -61,7 +62,7 @@ export function TrackOrderScreen() {
         setOrderData(orderRes.order || orderRes || null);
       } catch (error: unknown) {
         if (!isPoll) {
-          Alert.alert(
+          appAlert(
             'Unable to Load Tracking',
             parseApiError(error, {
               fallback: 'Failed to load tracking data. Please try again.',
@@ -180,19 +181,19 @@ export function TrackOrderScreen() {
       <StatusBar style="light" />
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxl }} showsVerticalScrollIndicator={false}>
         <View style={[styles.map, { height: MAP_H + insets.top }]}>
-          <GrabitMark size={300} variant="mono" color="rgba(196,240,66,0.06)" style={styles.mapWatermark} />
+          <GrabitMark size={300} variant="mono" color="rgba(255,201,77,0.08)" style={styles.mapWatermark} />
           <View style={{ marginTop: insets.top, height: MAP_H }}>
             <Svg width={W} height={MAP_H} style={StyleSheet.absoluteFill}>
               <Path d={curve} stroke="rgba(255,246,230,0.25)" strokeWidth={4} strokeDasharray="2 10" strokeLinecap="round" fill="none" />
-              <Circle cx={pad} cy={MAP_H * 0.68} r={9} fill={brand.lime} />
-              <Circle cx={pad + routeW} cy={MAP_H * 0.55} r={9} fill={brand.tomato} />
+              <Circle cx={pad} cy={MAP_H * 0.68} r={9} fill={brand.sprout} />
+              <Circle cx={pad + routeW} cy={MAP_H * 0.55} r={9} fill={brand.butter} />
             </Svg>
             <View style={[styles.pinLabel, { left: pad - 24, top: MAP_H * 0.68 + 14 }]}>
-              <Ionicons name="storefront" size={12} color={brand.lime} />
+              <Ionicons name="storefront" size={12} color={brand.sprout} />
               <Text style={styles.pinTxt}>Store</Text>
             </View>
             <View style={[styles.pinLabel, { right: pad - 24, top: MAP_H * 0.55 + 14 }]}>
-              <Ionicons name="home" size={12} color={brand.tomato} />
+              <Ionicons name="home" size={12} color={brand.butter} />
               <Text style={styles.pinTxt}>You</Text>
             </View>
             {!isCancelled ? (
@@ -207,7 +208,7 @@ export function TrackOrderScreen() {
                   ]}
                 />
                 <View style={styles.riderBubble}>
-                  <Ionicons name="bicycle" size={20} color={brand.forest} />
+                  <Ionicons name="bicycle" size={20} color={brand.ink} />
                 </View>
               </Animated.View>
             ) : null}
@@ -273,7 +274,7 @@ export function TrackOrderScreen() {
                           />
                         ) : null}
                         <View style={[styles.tlDot, done && styles.tlDotDone, current && styles.tlDotNow]}>
-                          {done ? <Ionicons name="checkmark" size={12} color={brand.oat} /> : null}
+                          {done ? <Ionicons name="checkmark" size={12} color={brand.cream} /> : null}
                         </View>
                         {i < trackingSteps.length - 1 ? <View style={[styles.tlLine, done && styles.tlLineDone]} /> : null}
                       </View>
@@ -368,7 +369,7 @@ export function TrackOrderScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  map: { backgroundColor: brand.forest, overflow: 'hidden' },
+  map: { backgroundColor: brand.ink, overflow: 'hidden' },
   mapWatermark: { position: 'absolute', right: -80, bottom: -90 },
   pinLabel: {
     position: 'absolute',
@@ -380,18 +381,18 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: radii.pill,
   },
-  pinTxt: { fontFamily: fonts.bold, fontSize: 11, color: brand.oat },
+  pinTxt: { fontFamily: fonts.bold, fontSize: 11, color: brand.cream },
   rider: { position: 'absolute', left: 0, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  riderPulse: { position: 'absolute', width: 40, height: 40, borderRadius: 20, backgroundColor: brand.lime },
+  riderPulse: { position: 'absolute', width: 40, height: 40, borderRadius: 20, backgroundColor: brand.sprout },
   riderBubble: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: brand.lime,
+    backgroundColor: brand.sprout,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: brand.forest,
+    borderColor: brand.ink,
   },
   gps: {
     position: 'absolute',
@@ -412,15 +413,15 @@ const styles = StyleSheet.create({
   },
   row1: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: spacing.md },
   etaLab: { fontFamily: fonts.medium, fontSize: 13, color: colors.textSecondary },
-  eta: { fontFamily: fonts.display, fontSize: 30, letterSpacing: -0.8, color: colors.text },
-  pricePill: { backgroundColor: colors.mint, paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radii.pill },
+  eta: { fontFamily: fonts.display, fontSize: 30, letterSpacing: -0.2, color: colors.text },
+  pricePill: { backgroundColor: colors.tint, paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radii.pill },
   price: { fontFamily: fonts.display, fontSize: 16, color: colors.primaryDark },
   barBg: { height: 8, backgroundColor: colors.sand, borderRadius: 4, overflow: 'hidden', marginBottom: spacing.xl },
   barFg: { height: 8, backgroundColor: colors.primary, borderRadius: 4 },
   cancelCard: {
     flexDirection: 'row',
     gap: spacing.md,
-    backgroundColor: colors.tomatoTint,
+    backgroundColor: colors.redTint,
     padding: spacing.lg,
     borderRadius: radii.lg,
     marginBottom: spacing.xl,
@@ -476,7 +477,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: colors.mint,
+    backgroundColor: colors.tint,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -486,7 +487,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.mint,
+    backgroundColor: colors.tint,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -532,6 +533,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: radii.pill,
   },
-  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: brand.tomato },
-  liveTxt: { fontFamily: fonts.bold, fontSize: 13, color: brand.oat },
+  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: brand.butter },
+  liveTxt: { fontFamily: fonts.bold, fontSize: 13, color: brand.cream },
 });

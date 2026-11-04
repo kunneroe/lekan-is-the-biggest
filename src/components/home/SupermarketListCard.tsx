@@ -39,7 +39,7 @@ function useStoreInfo(store: ApiSupermarket) {
 }
 
 /** Lime dot with a soft pulse — "open right now". */
-function LiveDot({ color = brand.lime }: { color?: string }) {
+function LiveDot({ color = brand.sprout }: { color?: string }) {
   const v = useRef(new Animated.Value(0)).current;
   const reduced = useReducedMotion();
   useEffect(() => {
@@ -73,7 +73,7 @@ function StatusPill({ closed, live = false }: { closed: boolean; live?: boolean 
       ) : live ? (
         <LiveDot />
       ) : (
-        <View style={[styles.liveDot, { backgroundColor: brand.lime }]} />
+        <View style={[styles.liveDot, { backgroundColor: brand.sprout }]} />
       )}
       <Text style={[styles.statusTxt, closed && { color: colors.danger }]} maxFontSizeMultiplier={1.2}>
         {closed ? 'Closed' : 'Open'}
@@ -86,7 +86,7 @@ function Rating({ value, light = false }: { value: string; light?: boolean }) {
   return (
     <View style={[styles.rating, light && styles.ratingLight]}>
       <Ionicons name="star" size={12} color={colors.star} />
-      <Text style={[styles.ratingText, light && { color: brand.oat }]} maxFontSizeMultiplier={1.2}>
+      <Text style={[styles.ratingText, light && { color: brand.cream }]} maxFontSizeMultiplier={1.2}>
         {value}
       </Text>
     </View>
@@ -96,7 +96,7 @@ function Rating({ value, light = false }: { value: string; light?: boolean }) {
 function FeeChip({ fee, label }: { fee: number; label: string }) {
   return (
     <View style={[styles.fee, fee === 0 && styles.feeFree]}>
-      <Ionicons name="bicycle" size={13} color={colors.primaryDark} />
+      <Ionicons name="bicycle" size={13} color={brand.ink} />
       <Text style={styles.feeTxt} numberOfLines={1} maxFontSizeMultiplier={1.2}>
         {label}
       </Text>
@@ -116,7 +116,7 @@ export function SupermarketListCard({ store, onPress, variant = 'card', width }:
         <View style={styles.heroScrim} />
         <View style={styles.heroTop}>
           <View style={styles.pick}>
-            <Ionicons name="sparkles" size={12} color={brand.forest} />
+            <Ionicons name="sparkles" size={12} color={brand.ink} />
             <Text style={styles.pickTxt} maxFontSizeMultiplier={1.2}>
               Top pick near you
             </Text>
@@ -277,9 +277,9 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: radii.pill,
   },
-  statusOpen: { backgroundColor: brand.forest },
+  statusOpen: { backgroundColor: brand.ink },
   statusClosed: { backgroundColor: colors.overlayWhite },
-  statusTxt: { fontFamily: fonts.bold, fontSize: 12, color: brand.oat },
+  statusTxt: { fontFamily: fonts.bold, fontSize: 12, color: brand.cream },
   rating: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -295,14 +295,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: colors.mint,
+    backgroundColor: colors.tint,
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
     borderRadius: radii.pill,
     flexShrink: 0,
   },
-  feeFree: { backgroundColor: brand.lime },
-  feeTxt: { fontFamily: fonts.bold, fontSize: 12, color: colors.primaryDark, flexShrink: 1 },
+  feeFree: { backgroundColor: brand.sprout },
+  feeTxt: { fontFamily: fonts.bold, fontSize: 12, color: brand.ink, flexShrink: 1 },
   metaTxt: { fontFamily: fonts.medium, fontSize: 13, color: colors.textSecondary, flexShrink: 1 },
 
   // card (classic full-width)
@@ -334,11 +334,11 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
     overflow: 'hidden',
     marginBottom: spacing.md,
-    backgroundColor: brand.forest,
+    backgroundColor: brand.ink,
     ...shadows.card,
   },
   heroImg: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
-  heroScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10,46,31,0.52)' },
+  heroScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(23,38,30,0.52)' },
   heroTop: {
     position: 'absolute',
     top: spacing.md,
@@ -352,16 +352,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: brand.lime,
+    backgroundColor: brand.sprout,
     paddingHorizontal: spacing.sm + 2,
     paddingVertical: 5,
     borderRadius: radii.pill,
   },
-  pickTxt: { fontFamily: fonts.bold, fontSize: 12, color: brand.forest },
+  pickTxt: { fontFamily: fonts.bold, fontSize: 12, color: brand.ink },
   heroBottom: { position: 'absolute', left: spacing.lg, right: spacing.lg, bottom: spacing.lg },
-  heroName: { fontFamily: fonts.display, fontSize: 24, lineHeight: 27, letterSpacing: -0.5, color: brand.oat },
+  heroName: { fontFamily: fonts.display, fontSize: 24, lineHeight: 28, letterSpacing: -0.2, color: '#FFFFFF' },
   heroMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 6 },
-  heroMetaTxt: { fontFamily: fonts.medium, fontSize: 13, color: brand.oat, flexShrink: 1 },
+  heroMetaTxt: { fontFamily: fonts.medium, fontSize: 13, color: brand.cream, flexShrink: 1 },
 
   // row (compact list)
   row: {
@@ -393,11 +393,11 @@ const styles = StyleSheet.create({
   tileBadges: { position: 'absolute', top: spacing.sm, left: spacing.sm },
   tileClosed: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(10,46,31,0.55)',
+    backgroundColor: 'rgba(23,38,30,0.55)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tileClosedTxt: { fontFamily: fonts.bold, fontSize: 13, color: brand.oat },
+  tileClosedTxt: { fontFamily: fonts.bold, fontSize: 13, color: brand.cream },
   tileBody: { padding: spacing.md, gap: 3 },
   tileName: { fontFamily: fonts.display, fontSize: 15, lineHeight: 18, color: colors.text, minHeight: 36 },
 });

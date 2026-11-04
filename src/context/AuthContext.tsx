@@ -7,10 +7,10 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { Alert } from 'react-native';
 import { authService } from '../services/authService';
 import { setLogoutHandler } from '../services/api';
 
+import { appAlert } from './DialogContext';
 type User = any; // Can be defined strictly later
 
 type AuthContextValue = {
@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsSignedIn(false);
     setUser(null);
     if (showAlert === true) {
-      Alert.alert('Session Expired', 'Please login again.');
+      appAlert('Session Expired', 'Please login again.');
     }
   }, []);
 

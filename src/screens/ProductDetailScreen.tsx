@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Alert, Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEffect, useRef, useState } from 'react';
 import { LoaderView } from '../components/brand/GrabitLoader';
@@ -25,6 +25,7 @@ import { haptic } from '../utils/haptics';
 import { parseApiError } from '../utils/parseApiError';
 import { TEXT_CAP, useBarHeight, useLayout } from '../utils/responsive';
 
+import { appAlert } from '../context/DialogContext';
 type R = RouteProp<RootStackParamList, 'ProductDetail'>;
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -102,7 +103,7 @@ export function ProductDetailScreen() {
       });
     } catch (error: unknown) {
       haptic.error();
-      Alert.alert(
+      appAlert(
         'Unable to Add to Cart',
         parseApiError(error, {
           fallback: 'Failed to add item to cart. Make sure you only add items from one supermarket.',
@@ -189,7 +190,7 @@ export function ProductDetailScreen() {
         <View style={styles.topRight}>
           <PressableScale
             style={styles.iconCircle}
-            onPress={() => Alert.alert('Share', 'Share sheet (mock).')}
+            onPress={() => appAlert('Share', 'Share sheet (mock).')}
             accessibilityRole="button"
             accessibilityLabel="Share"
           >
@@ -202,7 +203,7 @@ export function ProductDetailScreen() {
             accessibilityLabel={fav ? 'Remove from favorites' : 'Add to favorites'}
           >
             <Animated.View style={{ transform: [{ scale: heart }] }}>
-              <Ionicons name={fav ? 'heart' : 'heart-outline'} size={21} color={fav ? brand.tomato : colors.text} />
+              <Ionicons name={fav ? 'heart' : 'heart-outline'} size={21} color={fav ? brand.butter : colors.text} />
             </Animated.View>
           </Pressable>
           <CartBubble
@@ -275,7 +276,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: 6,
-    backgroundColor: colors.mint,
+    backgroundColor: colors.tint,
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
     borderRadius: radii.pill,
@@ -283,9 +284,9 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
   },
   storeName: { fontFamily: fonts.bold, fontSize: 13, color: colors.primaryDark },
-  title: { fontFamily: fonts.display, fontSize: 28, lineHeight: 31, letterSpacing: -0.6, color: colors.text },
+  title: { fontFamily: fonts.display, fontSize: 28, lineHeight: 31, letterSpacing: -0.2, color: colors.text },
   priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: spacing.sm, marginBottom: spacing.xl },
-  price: { fontFamily: fonts.display, fontSize: 28, letterSpacing: -0.5, color: colors.primary },
+  price: { fontFamily: fonts.display, fontSize: 28, letterSpacing: -0.2, color: colors.primary },
   unit: { fontFamily: fonts.medium, fontSize: 15, color: colors.textSecondary },
   stepRow: {
     flexDirection: 'row',
@@ -329,7 +330,7 @@ const styles = StyleSheet.create({
     ...shadows.lifted,
   },
   barLab: { fontFamily: fonts.medium, fontSize: 12, color: colors.textSecondary },
-  barTot: { fontFamily: fonts.display, fontSize: 22, letterSpacing: -0.4, color: colors.text },
+  barTot: { fontFamily: fonts.display, fontSize: 22, letterSpacing: -0.2, color: colors.text },
   barLeft: { flexShrink: 1, minWidth: 84 },
   barBtn: { flexGrow: 1, flexShrink: 0, flexBasis: 160, maxWidth: 240 },
 });

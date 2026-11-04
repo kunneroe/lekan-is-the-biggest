@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: fonts.display,
     fontSize: 22,
-    letterSpacing: -0.4,
+    letterSpacing: -0.2,
     color: colors.text,
     marginBottom: spacing.lg,
   },

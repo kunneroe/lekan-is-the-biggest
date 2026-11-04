@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  Alert,
   Animated,
   Pressable,
   RefreshControl,
@@ -25,6 +24,7 @@ import { haptic } from '../utils/haptics';
 import { parseApiError } from '../utils/parseApiError';
 import { cancellationText } from '../utils/orderStatus';
 
+import { appAlert } from '../context/DialogContext';
 export function OrdersScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
@@ -51,7 +51,7 @@ export function OrdersScreen() {
           const data = await orderService.getOrders(param);
           setOrders(data.orders || data || []);
         } catch (error: unknown) {
-          Alert.alert(
+          appAlert(
             'Unable to Load Orders',
             parseApiError(error, {
               fallback: 'Failed to load order history. Please try again.',
@@ -123,8 +123,8 @@ export function OrdersScreen() {
               setRefreshing(true);
               setReloadKey((k) => k + 1);
             }}
-            tintColor={brand.basil}
-            colors={[brand.basil, brand.tomato]}
+            tintColor={brand.green}
+            colors={[brand.green, brand.butter]}
           />
         }
       >
@@ -201,7 +201,7 @@ function ActiveCard({ order, index }: { order: any; index: number }) {
             <Text style={styles.time}>{new Date(displayDate).toLocaleDateString()}</Text>
           </View>
           <View style={[styles.badge, isOnTheWay ? styles.badgeGo : styles.badgeWait]}>
-            <View style={[styles.badgeDot, { backgroundColor: isOnTheWay ? brand.forest : brand.tomato }]} />
+            <View style={[styles.badgeDot, { backgroundColor: isOnTheWay ? brand.ink : brand.butter }]} />
             <Text style={styles.badgeTxt}>{badge}</Text>
           </View>
         </View>
@@ -225,7 +225,7 @@ function ActiveCard({ order, index }: { order: any; index: number }) {
           </PressableScale>
           <PressableScale
             style={styles.phone}
-            onPress={() => Alert.alert('Call Rider', 'This would call the assigned rider.')}
+            onPress={() => appAlert('Call Rider', 'This would call the assigned rider.')}
             accessibilityRole="button"
             accessibilityLabel="Call rider"
           >
@@ -254,7 +254,7 @@ function PastRow({ order, index, last }: { order: any; index: number; last: bool
           accessibilityLabel={`Open order from ${storeName}`}
           onPress={() => navigateRoot('TrackOrder', { orderId: order.id })}
         >
-          <View style={[styles.pastIcon, isCancelled && { backgroundColor: colors.tomatoTint }]}>
+          <View style={[styles.pastIcon, isCancelled && { backgroundColor: colors.redTint }]}>
             <Ionicons
               name={isCancelled ? 'close' : 'checkmark'}
               size={18}
@@ -284,7 +284,7 @@ function PastRow({ order, index, last }: { order: any; index: number; last: bool
           accessibilityRole="button"
           accessibilityLabel={`Reorder from ${storeName}`}
         >
-          <Ionicons name="refresh" size={14} color={brand.forest} />
+          <Ionicons name="refresh" size={14} color={brand.ink} />
           <Text style={styles.reorderTxt}>Reorder</Text>
         </PressableScale>
       </View>
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.md,
   },
-  title: { fontFamily: fonts.display, fontSize: 30, letterSpacing: -0.8, color: colors.text },
+  title: { fontFamily: fonts.display, fontSize: 30, letterSpacing: -0.2, color: colors.text },
   subtitle: { fontFamily: fonts.regular, fontSize: 14, color: colors.textSecondary, marginTop: 2 },
   seg: {
     flexDirection: 'row',
@@ -317,11 +317,11 @@ const styles = StyleSheet.create({
     bottom: 4,
     left: 4,
     borderRadius: radii.md,
-    backgroundColor: brand.forest,
+    backgroundColor: brand.ink,
   },
   segBtn: { flex: 1, paddingVertical: spacing.md, alignItems: 'center' },
   segTxt: { fontFamily: fonts.bold, fontSize: 14, color: colors.textSecondary },
-  segTxtOn: { color: brand.oat },
+  segTxtOn: { color: brand.cream },
   loading: { marginTop: spacing.xxxl * 2, alignItems: 'center' },
   card: {
     backgroundColor: colors.surface,
@@ -342,10 +342,10 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: radii.pill,
   },
-  badgeGo: { backgroundColor: brand.lime },
-  badgeWait: { backgroundColor: colors.tomatoTint },
+  badgeGo: { backgroundColor: brand.sprout },
+  badgeWait: { backgroundColor: colors.redTint },
   badgeDot: { width: 7, height: 7, borderRadius: 4 },
-  badgeTxt: { fontFamily: fonts.bold, fontSize: 12, color: brand.forest },
+  badgeTxt: { fontFamily: fonts.bold, fontSize: 12, color: brand.ink },
   mid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: radii.lg,
-    backgroundColor: colors.mint,
+    backgroundColor: colors.tint,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.mint,
+    backgroundColor: colors.tint,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -413,10 +413,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: brand.lime,
+    backgroundColor: brand.sprout,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radii.pill,
   },
-  reorderTxt: { fontFamily: fonts.bold, fontSize: 13, color: brand.forest },
+  reorderTxt: { fontFamily: fonts.bold, fontSize: 13, color: brand.ink },
 });

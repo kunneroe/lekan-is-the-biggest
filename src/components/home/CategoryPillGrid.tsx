@@ -215,8 +215,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   glow: { position: 'absolute', backgroundColor: 'rgba(255,255,255,0.55)' },
-  moreTile: { backgroundColor: brand.forest, borderColor: 'transparent' },
-  moreCount: { fontFamily: fonts.display, fontSize: 18, color: brand.lime },
+  moreTile: { backgroundColor: brand.ink, borderColor: 'transparent' },
+  moreCount: { fontFamily: fonts.display, fontSize: 18, color: brand.sprout },
   label: {
     marginTop: 7,
     minHeight: 30,

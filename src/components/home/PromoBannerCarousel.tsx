@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { brand, fonts, radii, spacing } from '../../theme';
 import { GrabitMark } from '../brand/GrabitMark';
 import { PressableScale } from '../motion/PressableScale';
 import { useReducedMotion } from '../../utils/motion';
 import { useLayout } from '../../utils/responsive';
 
+import { appAlert } from '../../context/DialogContext';
 type Banner = {
   id: string;
   title: string;
@@ -25,11 +26,11 @@ const BANNERS: Banner[] = [
     title: 'Free delivery on your first order',
     subtitle: 'Zero delivery fees on local markets today.',
     cta: 'Claim now',
-    bg: brand.forest,
-    fg: brand.oat,
-    ctaBg: brand.lime,
-    ctaFg: brand.forest,
-    mark: 'rgba(196,240,66,0.12)',
+    bg: brand.ink,
+    fg: brand.cream,
+    ctaBg: brand.butter,
+    ctaFg: brand.ink,
+    mark: 'rgba(255,201,77,0.14)',
     image: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=800&q=80',
   },
   {
@@ -37,11 +38,11 @@ const BANNERS: Banner[] = [
     title: 'Weekend flash deals',
     subtitle: 'Save on pantry staples from partner stores.',
     cta: 'Shop deals',
-    bg: brand.tomato,
-    fg: brand.forest,
-    ctaBg: brand.forest,
-    ctaFg: brand.oat,
-    mark: 'rgba(10,46,31,0.10)',
+    bg: brand.butter,
+    fg: brand.ink,
+    ctaBg: brand.ink,
+    ctaFg: brand.cream,
+    mark: 'rgba(23,38,30,0.09)',
     image: 'https://images.unsplash.com/photo-1606787366850-de6330120b65?w=800&q=80',
   },
   {
@@ -49,11 +50,11 @@ const BANNERS: Banner[] = [
     title: 'Grab it in minutes',
     subtitle: 'Track your rider live from store to door.',
     cta: 'Learn more',
-    bg: brand.lime,
-    fg: brand.forest,
-    ctaBg: brand.basil,
-    ctaFg: brand.oat,
-    mark: 'rgba(14,124,74,0.14)',
+    bg: brand.sprout,
+    fg: brand.ink,
+    ctaBg: brand.ink,
+    ctaFg: brand.sprout,
+    mark: 'rgba(23,38,30,0.1)',
     image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80',
   },
 ];
@@ -139,7 +140,7 @@ export function PromoBannerCarousel() {
                 <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, { color: b.fg }]}>{b.subtitle}</Text>
                 <PressableScale
                   hapticFeedback
-                  onPress={() => Alert.alert(b.cta, 'Promo applied to your next order (demo).')}
+                  onPress={() => appAlert(b.cta, 'Promo applied to your next order (demo).')}
                   style={[styles.cta, { backgroundColor: b.ctaBg }]}
                   accessibilityRole="button"
                 >
@@ -210,7 +211,7 @@ const styles = StyleSheet.create({
   },
   mark: { position: 'absolute', right: -50, bottom: -60 },
   textCol: { flex: 1, justifyContent: 'center', paddingRight: spacing.sm },
-  title: { fontFamily: fonts.display, fontSize: 21, lineHeight: 24, letterSpacing: -0.4, marginBottom: spacing.xs },
+  title: { fontFamily: fonts.display, fontSize: 21, lineHeight: 24, letterSpacing: -0.2, marginBottom: spacing.xs },
   subtitle: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, opacity: 0.9, marginBottom: spacing.md },
   cta: { alignSelf: 'flex-start', paddingVertical: spacing.sm + 1, paddingHorizontal: spacing.lg, borderRadius: radii.pill },
   ctaText: { fontFamily: fonts.bold, fontSize: 14 },
@@ -223,7 +224,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.85)',
   },
   dots: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: spacing.md },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: brand.basil, opacity: 0.3 },
-  track: { width: TRACK_W, height: 6, borderRadius: 3, backgroundColor: 'rgba(14,124,74,0.22)', overflow: 'hidden' },
-  fill: { width: TRACK_W, height: 6, borderRadius: 3, backgroundColor: brand.basil },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: brand.greenDeep, opacity: 0.3 },
+  track: { width: TRACK_W, height: 6, borderRadius: 3, backgroundColor: 'rgba(14,124,74,0.2)', overflow: 'hidden' },
+  fill: { width: TRACK_W, height: 6, borderRadius: 3, backgroundColor: brand.greenDeep },
 });

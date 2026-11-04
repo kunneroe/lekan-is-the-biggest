@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import { Alert, ImageBackground, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ImageBackground, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AuthSplitShell } from '../../components/auth/AuthSplitShell';
 import { AuthTextField } from '../../components/auth/AuthTextField';
 import { PrimaryButton } from '../../components/common/PrimaryButton';
@@ -12,6 +12,7 @@ import { brand, colors, fonts, radii, spacing } from '../../theme';
 import { haptic } from '../../utils/haptics';
 import { parseApiError } from '../../utils/parseApiError';
 
+import { appAlert } from '../../context/DialogContext';
 const PROMO_URI = 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=900&q=80';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
@@ -27,7 +28,7 @@ export function LoginScreen({ navigation }: Props) {
     if (busy) return;
     if (!email || !password) {
       haptic.error();
-      Alert.alert('Error', 'Please enter your email and password.');
+      appAlert('Error', 'Please enter your email and password.');
       return;
     }
     setBusy(true);
@@ -40,7 +41,7 @@ export function LoginScreen({ navigation }: Props) {
         fallback: 'Login failed. Please try again.',
         unauthorizedFallback: 'Incorrect email/phone or password. Please try again.',
       });
-      Alert.alert('Login Error', msg);
+      appAlert('Login Error', msg);
     } finally {
       setBusy(false);
     }
@@ -99,7 +100,7 @@ export function LoginScreen({ navigation }: Props) {
         <PressableScale
           containerStyle={{ flex: 1 }}
           style={styles.socialBtn}
-          onPress={() => Alert.alert('Google', 'Social sign-in is not connected in this demo.')}
+          onPress={() => appAlert('Google', 'Social sign-in is not connected in this demo.')}
           accessibilityRole="button"
           accessibilityLabel="Continue with Google"
         >
@@ -109,7 +110,7 @@ export function LoginScreen({ navigation }: Props) {
         <PressableScale
           containerStyle={{ flex: 1 }}
           style={styles.socialBtn}
-          onPress={() => Alert.alert('Apple', 'Social sign-in is not connected in this demo.')}
+          onPress={() => appAlert('Apple', 'Social sign-in is not connected in this demo.')}
           accessibilityRole="button"
           accessibilityLabel="Continue with Apple"
         >
@@ -147,13 +148,13 @@ const styles = StyleSheet.create({
   promoImg: { borderRadius: radii.xl },
   promoTint: {
     flex: 1,
-    backgroundColor: 'rgba(10,46,31,0.55)',
+    backgroundColor: 'rgba(23,38,30,0.55)',
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     padding: spacing.xl,
   },
-  promoDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: brand.tomato },
-  promoTxt: { flex: 1, fontFamily: fonts.display, color: brand.oat, fontSize: 17, lineHeight: 21 },
+  promoDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: brand.butter },
+  promoTxt: { flex: 1, fontFamily: fonts.display, color: brand.cream, fontSize: 17, lineHeight: 21 },
   legal: { fontFamily: fonts.regular, textAlign: 'center', color: colors.textMuted, fontSize: 12 },
 });

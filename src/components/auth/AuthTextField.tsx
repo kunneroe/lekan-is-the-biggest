@@ -46,12 +46,12 @@ export function AuthTextField({
         style={[
           styles.row,
           {
-            borderColor: focus.interpolate({ inputRange: [0, 1], outputRange: [colors.border, brand.basil] }),
+            borderColor: focus.interpolate({ inputRange: [0, 1], outputRange: [colors.border, brand.green] }),
             backgroundColor: focus.interpolate({ inputRange: [0, 1], outputRange: [colors.surfaceAlt, colors.surface] }),
           },
         ]}
       >
-        <Ionicons name={icon} size={20} color={focused ? brand.basil : colors.textMuted} />
+        <Ionicons name={icon} size={20} color={focused ? brand.green : colors.textMuted} />
         <TextInput
           style={styles.input}
           placeholder={placeholder}

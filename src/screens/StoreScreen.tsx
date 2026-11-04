@@ -4,7 +4,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
   Animated,
   Pressable,
   ScrollView,
@@ -41,6 +40,7 @@ import {
 import { haptic } from '../utils/haptics';
 import { parseApiError } from '../utils/parseApiError';
 
+import { appAlert } from '../context/DialogContext';
 type R = RouteProp<RootStackParamList, 'Store'>;
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -80,7 +80,7 @@ export function StoreScreen() {
         setStore(storeData.supermarket || storeData);
         setCategories(categoryList);
       } catch (error: unknown) {
-        Alert.alert(
+        appAlert(
           'Unable to Load Store',
           parseApiError(error, {
             fallback: 'Failed to load store details. Please try again.',
@@ -101,7 +101,7 @@ export function StoreScreen() {
         const productsData = await productService.getProductsBySupermarket(storeId, params);
         setAllProducts(productsData.products || productsData || []);
       } catch (error: unknown) {
-        Alert.alert(
+        appAlert(
           'Unable to Load Products',
           parseApiError(error, {
             fallback: 'Failed to load products. Please try again.',
@@ -138,7 +138,7 @@ export function StoreScreen() {
       });
     } catch (error: unknown) {
       haptic.error();
-      Alert.alert(
+      appAlert(
         'Cart Error',
         parseApiError(error, {
           fallback: 'Failed to add item to cart. Make sure you only add items from one supermarket.',
@@ -198,14 +198,14 @@ export function StoreScreen() {
                 <Text style={styles.heroChipTxt}>{store.rating || '4.5'}</Text>
               </View>
               <View style={styles.heroChip}>
-                <Ionicons name="time-outline" size={13} color={brand.oat} />
+                <Ionicons name="time-outline" size={13} color={brand.cream} />
                 <Text style={styles.heroChipTxt}>
                   {min}–{max} min
                 </Text>
               </View>
-              <View style={[styles.heroChip, Number(deliveryFee) === 0 && { backgroundColor: brand.lime }]}>
-                <Ionicons name="bicycle" size={13} color={Number(deliveryFee) === 0 ? brand.forest : brand.oat} />
-                <Text style={[styles.heroChipTxt, Number(deliveryFee) === 0 && { color: brand.forest }]}>
+              <View style={[styles.heroChip, Number(deliveryFee) === 0 && { backgroundColor: brand.sprout }]}>
+                <Ionicons name="bicycle" size={13} color={Number(deliveryFee) === 0 ? brand.ink : brand.cream} />
+                <Text style={[styles.heroChipTxt, Number(deliveryFee) === 0 && { color: brand.ink }]}>
                   {Number(deliveryFee) === 0 ? 'Free delivery' : `₦${Number(deliveryFee).toLocaleString()} delivery`}
                 </Text>
               </View>
@@ -367,15 +367,15 @@ function ProductCard({
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  hero: { height: HERO_H, justifyContent: 'flex-end', backgroundColor: brand.forest, overflow: 'hidden' },
-  heroScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10,46,31,0.5)' },
+  hero: { height: HERO_H, justifyContent: 'flex-end', backgroundColor: brand.ink, overflow: 'hidden' },
+  heroScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(23,38,30,0.5)' },
   heroText: { paddingHorizontal: spacing.xl },
   heroTitle: {
     fontFamily: fonts.display,
     fontSize: 30,
     lineHeight: 33,
-    letterSpacing: -0.8,
-    color: brand.oat,
+    letterSpacing: -0.2,
+    color: brand.cream,
     marginBottom: spacing.md,
   },
   heroChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: radii.pill,
   },
-  heroChipTxt: { fontFamily: fonts.bold, fontSize: 13, color: brand.oat },
+  heroChipTxt: { fontFamily: fonts.bold, fontSize: 13, color: brand.cream },
   body: {
     marginTop: -spacing.xxl,
     backgroundColor: colors.background,
@@ -418,11 +418,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  chipOn: { backgroundColor: brand.forest, borderColor: brand.forest },
+  chipOn: { backgroundColor: brand.ink, borderColor: brand.ink },
   chipTxt: { fontFamily: fonts.semibold, fontSize: 14, color: colors.text },
-  chipTxtOn: { color: brand.oat },
+  chipTxtOn: { color: brand.cream },
   secHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
-  secTitle: { fontFamily: fonts.display, fontSize: 20, letterSpacing: -0.4, color: colors.text },
+  secTitle: { fontFamily: fonts.display, fontSize: 20, letterSpacing: -0.2, color: colors.text },
   secSub: { fontFamily: fonts.medium, fontSize: 13, color: colors.textSecondary },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   cardCell: { width: '48%', marginBottom: spacing.md },
@@ -452,12 +452,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     top: 0,
-    backgroundColor: brand.forest,
+    backgroundColor: brand.ink,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 72,
   },
-  topBarTitle: { fontFamily: fonts.display, fontSize: 17, color: brand.oat },
+  topBarTitle: { fontFamily: fonts.display, fontSize: 17, color: brand.cream },
   topButtons: {
     position: 'absolute',
     left: spacing.lg,

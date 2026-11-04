@@ -2,11 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { LoaderView } from '../../components/brand/GrabitLoader';
+import { EmptyState } from '../../components/common/EmptyState';
+import { FadeInUp } from '../../components/motion/FadeInUp';
+import { PressableScale } from '../../components/motion/PressableScale';
 import { navigateRoot } from '../../navigation/navigationRef';
 import { orderService } from '../../services/orderService';
-import { GrabitLoader } from '../../components/brand/GrabitLoader';
-import { colors, radii, shadows, spacing, typography, fonts } from '../../theme';
+import { brand, colors, fonts, radii, shadows, spacing } from '../../theme';
 import { cancellationText } from '../../utils/orderStatus';
 
 export function OrderHistoryScreen() {
@@ -22,82 +24,89 @@ export function OrderHistoryScreen() {
       .finally(() => setLoading(false));
   }, []);
 
-  const list = [...orders].sort((a, b) =>
-    (a.placedAt || a.createdAt) < (b.placedAt || b.createdAt) ? 1 : -1,
-  );
+  const list = [...orders].sort((a, b) => ((a.placedAt || a.createdAt) < (b.placedAt || b.createdAt) ? 1 : -1));
 
   if (loading) {
-    return (
-      <View style={styles.centered}>
-        <GrabitLoader size={44} />
-      </View>
-    );
+    return <LoaderView label="Finding your orders…" />;
   }
 
   if (list.length === 0) {
     return (
-      <View style={styles.centered}>
-        <Ionicons name="time-outline" size={56} color={colors.textMuted} />
-        <Text style={styles.emptyTitle}>No past orders yet</Text>
-        <Text style={styles.emptySub}>
-          Completed and delivered orders will be listed here for easy reordering.
-        </Text>
-        <Pressable
-          style={styles.emptyBtn}
-          onPress={() => navigateRoot('MainTabs', { screen: 'Home' })}
-        >
-          <Text style={styles.emptyBtnTxt}>Browse supermarkets</Text>
-        </Pressable>
+      <View style={[styles.screen, { justifyContent: 'center' }]}>
+        <EmptyState
+          art="bag"
+          title="No past orders yet"
+          body="Delivered orders show up here so you can grab them again in one tap."
+          actionLabel="Browse supermarkets"
+          onAction={() => navigateRoot('MainTabs', { screen: 'Home' })}
+        />
       </View>
     );
   }
 
   return (
     <ScrollView
-      contentContainerStyle={{
-        padding: spacing.xl,
-        paddingBottom: insets.bottom + spacing.xxl,
-      }}
+      style={styles.screen}
+      contentContainerStyle={{ padding: spacing.xl, paddingBottom: insets.bottom + spacing.xxl }}
+      showsVerticalScrollIndicator={false}
     >
-      {list.map((o) => {
+      {list.map((o, i) => {
         const storeName = o.storeName || o.supermarket?.name || 'Supermarket';
         const total = Number(o.totalAmount ?? o.total ?? 0);
         const rawDate = o.placedAt || o.createdAt;
         const date = rawDate ? new Date(rawDate).toLocaleDateString() : '—';
         const isCancelled = o.status === 'CANCELLED';
-        const statusLabel = isCancelled ? 'Cancelled' : 'Delivered';
         const storeId = o.storeId || o.supermarketId;
 
         return (
-          <View key={o.id} style={styles.row}>
-            {/* Tapping the order opens its detail/tracking view; Reorder is a separate button. */}
-            <Pressable
-              style={styles.main}
-              accessibilityRole="button"
-              accessibilityLabel={`Open order from ${storeName}`}
-              onPress={() => navigateRoot('TrackOrder', { orderId: o.id })}
-            >
-              <View style={styles.iconWrap}>
-                <Ionicons name="storefront-outline" size={20} color={colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.store}>{storeName}</Text>
-                <Text style={styles.meta}>
-                  {date} ·{' '}
-                  <Text style={isCancelled ? styles.cancelled : styles.delivered}>
-                    {statusLabel}
+          <FadeInUp key={o.id} index={i}>
+            <View style={styles.card}>
+              {/* Tapping the order opens its detail/tracking view; Reorder is a separate button. */}
+              <Pressable
+                style={styles.main}
+                accessibilityRole="button"
+                accessibilityLabel={`Open order from ${storeName}`}
+                onPress={() => navigateRoot('TrackOrder', { orderId: o.id })}
+              >
+                <View style={[styles.iconWrap, isCancelled && { backgroundColor: colors.redTint }]}>
+                  <Ionicons
+                    name={isCancelled ? 'close' : 'checkmark'}
+                    size={18}
+                    color={isCancelled ? colors.danger : brand.leaf}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.store} numberOfLines={1}>
+                    {storeName}
                   </Text>
+                  <Text style={styles.meta}>{date}</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                  <Text style={styles.price}>₦{total.toLocaleString()}</Text>
+                  <View style={[styles.pill, isCancelled ? styles.pillCancel : styles.pillDone]}>
+                    <Text style={[styles.pillTxt, { color: isCancelled ? colors.danger : brand.leaf }]}>
+                      {isCancelled ? 'Cancelled' : 'Delivered'}
+                    </Text>
+                  </View>
+                </View>
+              </Pressable>
+              {isCancelled ? (
+                <Text style={styles.reason} numberOfLines={2}>
+                  {cancellationText(o)}
                 </Text>
-                {isCancelled && (
-                  <Text style={styles.reason} numberOfLines={2}>{cancellationText(o)}</Text>
-                )}
-              </View>
-              <Text style={styles.price}>₦{total.toLocaleString()}</Text>
-            </Pressable>
-            <Pressable style={styles.reorder} onPress={() => navigateRoot('Store', { storeId })}>
-              <Text style={styles.reorderTxt}>Reorder</Text>
-            </Pressable>
-          </View>
+              ) : null}
+              <PressableScale
+                style={styles.reorder}
+                hapticFeedback
+                onPress={() => navigateRoot('Store', { storeId })}
+                accessibilityRole="button"
+                accessibilityLabel={`Reorder from ${storeName}`}
+              >
+                <Ionicons name="refresh" size={15} color={brand.ink} />
+                <Text style={styles.reorderTxt}>Grab it again</Text>
+              </PressableScale>
+            </View>
+          </FadeInUp>
         );
       })}
     </ScrollView>
@@ -105,65 +114,40 @@ export function OrderHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
-  },
-  emptyTitle: {
-    ...typography.sectionTitle,
-    marginTop: spacing.lg,
-    color: colors.text,
-    textAlign: 'center',
-  },
-  emptySub: {
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-    lineHeight: 22,
-    maxWidth: 320,
-  },
-  emptyBtn: {
-    marginTop: spacing.xl,
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.xxl,
-    paddingVertical: spacing.lg,
-    borderRadius: radii.md,
-  },
-  emptyBtnTxt: { color: colors.surface, fontFamily: fonts.black },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.lg,
+  screen: { flex: 1, backgroundColor: colors.background },
+  card: {
     backgroundColor: colors.surface,
-    borderRadius: radii.lg,
+    borderRadius: radii.xl,
+    padding: spacing.lg,
     marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    gap: spacing.md,
     ...shadows.soft,
   },
+  main: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   iconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.mint,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: colors.leafTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  main: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  reason: { color: colors.danger, fontSize: 12, fontFamily: fonts.semibold, marginTop: 2 },
+  store: { fontFamily: fonts.display, fontSize: 17, color: colors.text },
+  meta: { fontFamily: fonts.regular, fontSize: 13, color: colors.textSecondary, marginTop: 2 },
+  price: { fontFamily: fonts.display, fontSize: 17, color: colors.text },
+  pill: { paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.pill },
+  pillDone: { backgroundColor: colors.leafTint },
+  pillCancel: { backgroundColor: colors.redTint },
+  pillTxt: { fontFamily: fonts.bold, fontSize: 11 },
+  reason: { fontFamily: fonts.semibold, fontSize: 12, color: colors.danger },
   reorder: {
-    backgroundColor: colors.lime,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: brand.butter,
+    paddingVertical: spacing.sm + 2,
     borderRadius: radii.pill,
   },
-  reorderTxt: { color: colors.forest, fontFamily: fonts.bold, fontSize: 12 },
-  store: { fontFamily: fonts.black, color: colors.text },
-  meta: { color: colors.textSecondary, fontSize: 12, marginTop: 4 },
-  delivered: { color: colors.open, fontFamily: fonts.bold },
-  cancelled: { color: colors.danger, fontFamily: fonts.bold },
-  price: { fontFamily: fonts.black, color: colors.primary },
+  reorderTxt: { fontFamily: fonts.bold, fontSize: 14, color: brand.ink },
 });

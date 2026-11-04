@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: fonts.display,
     fontSize: 34,
-    letterSpacing: -0.9,
+    letterSpacing: -0.2,
     color: colors.text,
     textAlign: 'center',
     marginBottom: spacing.sm,
@@ -144,6 +144,6 @@ const styles = StyleSheet.create({
   oid: { fontFamily: fonts.medium, fontSize: 12, color: colors.textMuted },
   sum: { fontFamily: fonts.display, fontSize: 17, color: colors.text, marginTop: 4 },
   etaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
-  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: brand.tomato },
+  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: brand.butter },
   eta: { fontFamily: fonts.semibold, color: colors.primary, fontSize: 13 },
 });

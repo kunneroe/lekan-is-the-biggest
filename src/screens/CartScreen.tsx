@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GrabitLoader, LoaderView } from '../components/brand/GrabitLoader';
 import { GrabitMark } from '../components/brand/GrabitMark';
@@ -21,6 +21,7 @@ import { haptic } from '../utils/haptics';
 import { parseApiError } from '../utils/parseApiError';
 import { TEXT_CAP, useBarHeight, useLayout } from '../utils/responsive';
 
+import { appAlert } from '../context/DialogContext';
 export function CartScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
@@ -65,7 +66,7 @@ export function CartScreen() {
       await cartService.updateItemQuantity(itemId, qty);
       await fetchCart();
     } catch (error: unknown) {
-      Alert.alert(
+      appAlert(
         'Unable to Update Cart',
         parseApiError(error, {
           fallback: 'Failed to update quantity. Please try again.',
@@ -84,7 +85,7 @@ export function CartScreen() {
       await cartService.removeItem(itemId);
       await fetchCart();
     } catch (error: unknown) {
-      Alert.alert(
+      appAlert(
         'Unable to Update Cart',
         parseApiError(error, {
           fallback: 'Failed to remove item. Please try again.',
@@ -143,7 +144,7 @@ export function CartScreen() {
       >
         <View style={styles.banner}>
           <View style={styles.bannerIcon}>
-            <Ionicons name="storefront" size={18} color={brand.oat} />
+            <Ionicons name="storefront" size={18} color={brand.cream} />
           </View>
           <Text style={styles.bannerTxt}>
             Grabbing from <Text style={styles.bannerBold}>{store.name}</Text>. Delivery times may vary.
@@ -169,7 +170,7 @@ export function CartScreen() {
                   accessibilityLabel={l.quantity <= 1 ? `Remove ${l.product?.name}` : 'Decrease quantity'}
                   onPress={() =>
                     l.quantity <= 1
-                      ? Alert.alert('Remove item?', '', [
+                      ? appAlert('Remove item?', '', [
                           { text: 'Cancel', style: 'cancel' },
                           { text: 'Remove', style: 'destructive', onPress: () => removeLine(l.id) },
                         ])
@@ -244,13 +245,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.md,
   },
-  headTitle: { fontFamily: fonts.display, fontSize: 30, letterSpacing: -0.8, color: colors.text },
+  headTitle: { fontFamily: fonts.display, fontSize: 30, letterSpacing: -0.2, color: colors.text },
   headSub: { fontFamily: fonts.medium, fontSize: 14, color: colors.textSecondary, marginTop: 2 },
   banner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.mint,
+    backgroundColor: colors.tint,
     padding: spacing.md,
     borderRadius: radii.lg,
     marginBottom: spacing.lg,
@@ -303,7 +304,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: colors.mintStrong,
+    borderColor: colors.tintStrong,
     padding: spacing.lg,
     borderRadius: radii.lg,
     marginBottom: spacing.xl,
@@ -330,13 +331,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.lg,
-    backgroundColor: brand.forest,
+    backgroundColor: brand.ink,
     borderRadius: radii.xl,
     paddingVertical: spacing.sm,
     paddingLeft: spacing.xl,
     paddingRight: spacing.sm,
     ...shadows.lifted,
   },
-  barLab: { fontFamily: fonts.medium, fontSize: 12, color: brand.lime },
-  barTot: { fontFamily: fonts.display, fontSize: 21, color: brand.oat },
+  barLab: { fontFamily: fonts.medium, fontSize: 12, color: brand.butter },
+  barTot: { fontFamily: fonts.display, fontSize: 21, color: brand.cream },
 });

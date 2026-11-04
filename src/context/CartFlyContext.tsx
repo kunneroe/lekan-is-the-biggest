@@ -158,5 +158,5 @@ const styles = StyleSheet.create({
     ...shadows.lifted,
   },
   img: { width: '100%', height: '100%', borderRadius: SIZE / 2 },
-  dot: { width: SIZE * 0.6, height: SIZE * 0.6, borderRadius: SIZE * 0.3, backgroundColor: brand.tomato },
+  dot: { width: SIZE * 0.6, height: SIZE * 0.6, borderRadius: SIZE * 0.3, backgroundColor: brand.butter },
 });

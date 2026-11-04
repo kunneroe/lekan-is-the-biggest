@@ -157,9 +157,9 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
-  chipActive: { backgroundColor: brand.forest, borderColor: brand.forest },
+  chipActive: { backgroundColor: brand.ink, borderColor: brand.ink },
   chipTxt: { fontFamily: fonts.semibold, fontSize: 14, color: colors.text },
-  chipTxtActive: { color: brand.oat },
+  chipTxtActive: { color: brand.cream },
   footer: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.xl, gap: spacing.md },
   clearBtn: {
     paddingVertical: spacing.lg,

@@ -36,7 +36,7 @@ export function AuthSplitShell({ title, subtitle, children, belowCard, onBack }:
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.panel, { paddingTop: insets.top + spacing.xl }]}>
-          <GrabitMark size={240} variant="mono" color="rgba(196,240,66,0.09)" style={styles.watermark} />
+          <GrabitMark size={240} variant="mono" color="rgba(185,232,58,0.12)" style={styles.watermark} />
           <FadeInUp style={styles.logoRow}>
             {onBack ? (
               <Pressable
@@ -46,10 +46,10 @@ export function AuthSplitShell({ title, subtitle, children, belowCard, onBack }:
                 accessibilityRole="button"
                 accessibilityLabel="Back"
               >
-                <Ionicons name="arrow-back" size={22} color={brand.oat} />
+                <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
               </Pressable>
             ) : null}
-            <GrabitLogo size={26} tone="dark" />
+            <GrabitLogo size={26} tone="brand" />
           </FadeInUp>
           <FadeInUp index={1}>
             <Text maxFontSizeMultiplier={1.25} style={styles.screenTitle}>{title}</Text>
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: colors.background },
   scrollContent: { flexGrow: 1 },
   panel: {
-    backgroundColor: brand.basil,
+    backgroundColor: brand.green,
     paddingHorizontal: spacing.xxl,
     paddingBottom: spacing.xxxl + spacing.xxl,
     borderBottomLeftRadius: radii.xxl,
@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,246,230,0.14)',
+    backgroundColor: 'rgba(255,255,255,0.16)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -97,12 +97,12 @@ const styles = StyleSheet.create({
     fontFamily: fonts.display,
     fontSize: 32,
     lineHeight: 35,
-    letterSpacing: -0.9,
-    color: brand.oat,
+    letterSpacing: -0.2,
+    color: '#FFFFFF',
     marginTop: spacing.xxl,
     marginBottom: spacing.sm,
   },
-  screenSub: { fontFamily: fonts.regular, fontSize: 15, color: brand.oat, opacity: 0.88, lineHeight: 22, maxWidth: 330 },
+  screenSub: { fontFamily: fonts.regular, fontSize: 15, color: brand.cream, opacity: 0.92, lineHeight: 22, maxWidth: 330 },
   cardWrap: { marginTop: -(spacing.xxxl + spacing.md), paddingHorizontal: spacing.lg },
   card: { backgroundColor: colors.surface, borderRadius: radii.xxl, padding: spacing.xl, ...shadows.lifted },
   below: { marginTop: spacing.xl, paddingHorizontal: spacing.xl },

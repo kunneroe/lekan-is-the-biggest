@@ -135,7 +135,7 @@ export function StoreSection({
             accessibilityRole="button"
             accessibilityState={{ selected: c.on }}
           >
-            <Ionicons name={c.icon} size={14} color={c.on ? brand.lime : colors.textSecondary} />
+            <Ionicons name={c.icon} size={14} color={c.on ? brand.sprout : colors.textSecondary} />
             <Text style={[styles.chipTxt, c.on && styles.chipTxtOn]} maxFontSizeMultiplier={1.25}>
               {c.label}
             </Text>
@@ -190,7 +190,7 @@ export function StoreSection({
             See all supermarkets
           </Text>
           <View style={styles.seeAllIcon}>
-            <Ionicons name="arrow-forward" size={16} color={brand.oat} />
+            <Ionicons name="arrow-forward" size={16} color={brand.cream} />
           </View>
         </Pressable>
       ) : null}
@@ -226,7 +226,7 @@ function LayoutToggle({ value, onChange }: { value: StoreLayout; onChange: (l: S
             accessibilityState={{ checked: on }}
             hitSlop={4}
           >
-            <MaterialCommunityIcons name={l.icon} size={19} color={on ? brand.lime : colors.textSecondary} />
+            <MaterialCommunityIcons name={l.icon} size={19} color={on ? brand.sprout : colors.textSecondary} />
           </Pressable>
         );
       })}
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
   headText: { flex: 1, minWidth: 0 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  title: { flexShrink: 1, fontFamily: fonts.display, fontSize: 20, lineHeight: 23, letterSpacing: -0.4, color: colors.text },
+  title: { flexShrink: 1, fontFamily: fonts.display, fontSize: 20, lineHeight: 23, letterSpacing: -0.2, color: colors.text },
   sub: { fontFamily: fonts.medium, fontSize: 13, color: colors.textSecondary, marginTop: 2 },
   toggle: {
     flexDirection: 'row',
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     padding: 3,
   },
-  toggleKnob: { position: 'absolute', top: 3, left: 3, borderRadius: radii.pill, backgroundColor: brand.forest },
+  toggleKnob: { position: 'absolute', top: 3, left: 3, borderRadius: radii.pill, backgroundColor: brand.ink },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -320,14 +320,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  chipOn: { backgroundColor: brand.forest, borderColor: brand.forest },
+  chipOn: { backgroundColor: brand.ink, borderColor: brand.ink },
   chipTxt: { fontFamily: fonts.semibold, fontSize: 13, color: colors.text },
-  chipTxtOn: { color: brand.oat },
+  chipTxtOn: { color: brand.cream },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: spacing.md },
   gridCell: { width: '48.3%' },
   counter: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: spacing.sm },
   counterDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.border },
-  counterDotOn: { width: 18, backgroundColor: brand.basil },
+  counterDotOn: { width: 18, backgroundColor: brand.green },
   seeAll: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderRadius: radii.lg,
     borderWidth: 1.5,
-    borderColor: colors.mintStrong,
+    borderColor: colors.tintStrong,
     backgroundColor: colors.surface,
   },
   seeAllTxt: { fontFamily: fonts.bold, fontSize: 15, color: colors.primary },

@@ -7,7 +7,7 @@ import {
 } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LoaderView } from '../components/brand/GrabitLoader';
 import { EmptyState } from '../components/common/EmptyState';
@@ -33,6 +33,7 @@ import { formatAddressLabel, formatAddressLine } from '../utils/addressFormat';
 import { haptic } from '../utils/haptics';
 import { parseApiError } from '../utils/parseApiError';
 import { useBarHeight, useLayout } from '../utils/responsive';
+import { appAlert } from '../context/DialogContext';
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type R = RouteProp<RootStackParamList, 'Checkout'>;
 
@@ -137,7 +138,7 @@ export function CheckoutScreen() {
     if (placing) return;
 
     if (!selectedAddressId || !addr) {
-      Alert.alert('Delivery address required', 'Please add and select a delivery address first.');
+      appAlert('Delivery address required', 'Please add and select a delivery address first.');
       return;
     }
 
@@ -174,7 +175,7 @@ export function CheckoutScreen() {
       });
     } catch (error: unknown) {
       haptic.error();
-      Alert.alert(
+      appAlert(
         'Checkout Error',
         parseApiError(error, {
           fallback: 'Failed to place order. Please try again.',
@@ -204,7 +205,7 @@ export function CheckoutScreen() {
           <View style={styles.card}>
             <View style={styles.addrRow}>
               <View style={styles.pin}>
-                <Ionicons name="location" size={22} color={brand.oat} />
+                <Ionicons name="location" size={22} color={brand.cream} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.addrTitle}>{formatAddressLabel(addr)}</Text>
@@ -242,8 +243,8 @@ export function CheckoutScreen() {
                 accessibilityRole="radio"
                 accessibilityState={{ checked: on }}
               >
-                <View style={[styles.payIcon, on && { backgroundColor: brand.basil }]}>
-                  <Ionicons name={p.icon} size={20} color={on ? brand.oat : brand.basil} />
+                <View style={[styles.payIcon, on && { backgroundColor: brand.green }]}>
+                  <Ionicons name={p.icon} size={20} color={on ? brand.cream : brand.green} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.payLab}>{p.label}</Text>
@@ -316,12 +317,12 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: brand.forest,
+    backgroundColor: brand.ink,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  numTxt: { fontFamily: fonts.black, fontSize: 13, color: brand.lime },
-  h: { fontFamily: fonts.display, fontSize: 20, letterSpacing: -0.4, color: colors.text },
+  numTxt: { fontFamily: fonts.black, fontSize: 13, color: brand.sprout },
+  h: { fontFamily: fonts.display, fontSize: 20, letterSpacing: -0.2, color: colors.text },
   change: { fontFamily: fonts.bold, fontSize: 14, color: colors.primary },
   changeDisabled: { opacity: 0.45 },
   card: { backgroundColor: colors.surface, borderRadius: radii.xl, padding: spacing.lg, ...shadows.soft },
@@ -330,7 +331,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: brand.basil,
+    backgroundColor: brand.green,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -365,13 +366,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     marginBottom: spacing.sm,
   },
-  payOn: { borderColor: colors.primary, backgroundColor: colors.mint },
+  payOn: { borderColor: colors.primary, backgroundColor: colors.tint },
   payDisabled: { opacity: 0.55 },
   payIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.mint,
+    backgroundColor: colors.tint,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -392,7 +393,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: colors.mint,
+    backgroundColor: colors.tint,
     paddingHorizontal: spacing.md,
     paddingVertical: 5,
     borderRadius: radii.pill,

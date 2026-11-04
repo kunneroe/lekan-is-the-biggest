@@ -23,7 +23,7 @@ export function ProductImage({ uri, style, label = 'Product' }: Props) {
         accessibilityLabel={label}
         style={[styles.ph, style as StyleProp<ViewStyle>]}
       >
-        <GrabitMark size={Math.max(20, Math.min(56, h * 0.4))} variant="mono" color={colors.mintStrong} />
+        <GrabitMark size={Math.max(20, Math.min(56, h * 0.4))} variant="mono" color={colors.tintStrong} knockout={colors.tint} />
       </View>
     );
   }
@@ -41,7 +41,7 @@ export function ProductImage({ uri, style, label = 'Product' }: Props) {
 const styles = StyleSheet.create({
   img: { backgroundColor: colors.sand },
   ph: {
-    backgroundColor: colors.mint,
+    backgroundColor: colors.tint,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',

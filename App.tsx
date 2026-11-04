@@ -1,7 +1,4 @@
-import {
-  BricolageGrotesque_700Bold,
-  BricolageGrotesque_800ExtraBold,
-} from '@expo-google-fonts/bricolage-grotesque';
+import { Fredoka_600SemiBold, Fredoka_700Bold } from '@expo-google-fonts/fredoka';
 import {
   DMSans_400Regular,
   DMSans_500Medium,
@@ -20,6 +17,7 @@ import { AnimatedSplash } from './src/components/brand/AnimatedSplash';
 import { AddressProvider } from './src/context/AddressContext';
 import { AuthProvider } from './src/context/AuthContext';
 import { CartFlyProvider } from './src/context/CartFlyContext';
+import { DialogProvider } from './src/context/DialogContext';
 import { FavoriteProvider } from './src/context/FavoriteContext';
 import { OnboardingGateProvider } from './src/context/OnboardingGateContext';
 import { ToastProvider } from './src/context/ToastContext';
@@ -38,7 +36,7 @@ const navTheme: Theme = {
     card: colors.background,
     text: colors.text,
     border: colors.border,
-    notification: brand.tomato,
+    notification: brand.butter,
   },
   fonts: {
     regular: { fontFamily: fonts.regular, fontWeight: 'normal' },
@@ -50,8 +48,8 @@ const navTheme: Theme = {
 
 export default function App() {
   const [fontsLoaded, fontError] = useFonts({
-    BricolageGrotesque_700Bold,
-    BricolageGrotesque_800ExtraBold,
+    Fredoka_600SemiBold,
+    Fredoka_700Bold,
     DMSans_400Regular,
     DMSans_500Medium,
     DMSans_600SemiBold,
@@ -66,11 +64,12 @@ export default function App() {
   }, [ready]);
 
   if (!ready) {
-    return <View style={{ flex: 1, backgroundColor: brand.basil }} />;
+    return <View style={{ flex: 1, backgroundColor: brand.green }} />;
   }
 
   return (
     <SafeAreaProvider>
+      <DialogProvider>
       <OnboardingGateProvider>
         <AuthProvider>
           <AddressProvider>
@@ -87,6 +86,7 @@ export default function App() {
           </AddressProvider>
         </AuthProvider>
       </OnboardingGateProvider>
+      </DialogProvider>
       {!splashDone ? <AnimatedSplash onFinish={() => setSplashDone(true)} /> : null}
     </SafeAreaProvider>
   );

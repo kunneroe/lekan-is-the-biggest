@@ -20,10 +20,10 @@ export function HomeHeader({ greeting, deliveryLine, onPressDelivery, onPressNot
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.panel, { paddingTop: insets.top + spacing.md }]}>
-      <GrabitMark size={260} variant="mono" color="rgba(196,240,66,0.09)" style={styles.watermark} />
+      <GrabitMark size={260} variant="mono" color="rgba(185,232,58,0.12)" style={styles.watermark} />
 
       <View style={styles.topRow}>
-        <GrabitLogo size={22} tone="dark" />
+        <GrabitLogo size={22} tone="brand" />
         <Pressable
           onPress={onPressNotifications}
           style={({ pressed }) => [styles.bell, pressed && { transform: [{ scale: 0.92 }] }]}
@@ -31,7 +31,7 @@ export function HomeHeader({ greeting, deliveryLine, onPressDelivery, onPressNot
           accessibilityRole="button"
           accessibilityLabel="Notifications"
         >
-          <Ionicons name="notifications-outline" size={22} color={brand.oat} />
+          <Ionicons name="notifications-outline" size={22} color="#FFFFFF" />
         </Pressable>
       </View>
 
@@ -44,11 +44,11 @@ export function HomeHeader({ greeting, deliveryLine, onPressDelivery, onPressNot
       >
         <Text style={styles.deliverLabel}>Deliver to</Text>
         <View style={styles.deliverRow}>
-          <Ionicons name="location" size={16} color={brand.lime} />
+          <Ionicons name="location" size={16} color={brand.sprout} />
           <Text style={styles.deliverLine} numberOfLines={1}>
             {deliveryLine}
           </Text>
-          <Ionicons name="chevron-down" size={16} color={brand.oat} />
+          <Ionicons name="chevron-down" size={16} color="#FFFFFF" />
         </View>
       </Pressable>
 
@@ -62,7 +62,7 @@ export function HomeHeader({ greeting, deliveryLine, onPressDelivery, onPressNot
 
 const styles = StyleSheet.create({
   panel: {
-    backgroundColor: brand.basil,
+    backgroundColor: brand.green,
     borderBottomLeftRadius: radii.xxl,
     borderBottomRightRadius: radii.xxl,
     paddingHorizontal: spacing.xl,
@@ -76,21 +76,21 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255,246,230,0.14)',
+    backgroundColor: 'rgba(255,255,255,0.16)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   delivery: { marginTop: spacing.lg, alignSelf: 'flex-start', maxWidth: '92%' },
-  deliverLabel: { fontFamily: fonts.semibold, fontSize: 12, color: brand.lime, letterSpacing: 0.3 },
+  deliverLabel: { fontFamily: fonts.bold, fontSize: 12, color: brand.sprout, letterSpacing: 0.3 },
   deliverRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
-  deliverLine: { fontFamily: fonts.bold, fontSize: 15, color: brand.oat, flexShrink: 1 },
-  greeting: { marginTop: spacing.lg, fontFamily: fonts.medium, fontSize: 15, color: brand.oat, opacity: 0.9 },
+  deliverLine: { fontFamily: fonts.bold, fontSize: 15, color: '#FFFFFF', flexShrink: 1 },
+  greeting: { marginTop: spacing.lg, fontFamily: fonts.medium, fontSize: 15, color: brand.cream, opacity: 0.92 },
   headline: {
     fontFamily: fonts.display,
     fontSize: 30,
     lineHeight: 33,
-    letterSpacing: -0.8,
-    color: brand.oat,
+    letterSpacing: -0.2,
+    color: '#FFFFFF',
     marginTop: 2,
     maxWidth: 300,
   },

@@ -138,7 +138,7 @@ export function OnboardingScreen() {
                     ]}
                   >
                     <View style={styles.heroIcon}>
-                      <Ionicons name={item.chip.icon} size={20} color={brand.oat} />
+                      <Ionicons name={item.chip.icon} size={20} color={brand.cream} />
                     </View>
                     <View>
                       <Text style={styles.heroBadgeTitle}>{item.chip.title}</Text>
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.display,
     fontSize: 27,
     lineHeight: 30,
-    letterSpacing: -0.7,
+    letterSpacing: -0.2,
     textAlign: 'center',
     color: colors.text,
     marginBottom: spacing.md,

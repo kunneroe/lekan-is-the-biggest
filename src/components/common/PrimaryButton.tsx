@@ -75,9 +75,9 @@ const styles = StyleSheet.create({
   secondary: {
     backgroundColor: colors.surface,
     borderWidth: 1.5,
-    borderColor: colors.mintStrong,
+    borderColor: colors.tintStrong,
   },
-  dark: { backgroundColor: brand.forest },
+  dark: { backgroundColor: brand.ink },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, maxWidth: '100%' },
   label: { fontFamily: fonts.bold, fontSize: 16 },
   shrink: { flexShrink: 1 },

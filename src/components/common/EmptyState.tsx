@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { brand, colors, fonts, radii, spacing } from '../../theme';
 import { useReducedMotion } from '../../utils/motion';
 import { GrabitMark } from '../brand/GrabitMark';
@@ -45,16 +44,11 @@ export function EmptyState({ art = 'bag', title, body, actionLabel, onAction, st
       <View style={styles.disc}>
         <Animated.View style={motionStyle}>
           {art === 'mark' ? (
-            <GrabitMark size={84} />
+            <GrabitMark size={88} />
           ) : art === 'search' ? (
-            <Ionicons name="search" size={64} color={brand.basil} />
+            <Ionicons name="search" size={60} color={colors.primary} />
           ) : (
-            <Svg width={96} height={104} viewBox="0 0 96 104">
-              <Path d="M30 34C30 14 66 14 66 34" fill="none" stroke={brand.deepBasil} strokeWidth={7} strokeLinecap="round" />
-              <Rect x={10} y={34} width={76} height={66} rx={16} fill={brand.basil} />
-              <Circle cx={48} cy={66} r={9} fill={brand.tomato} />
-              <Path d="M48 57C49 52 53 50 57 50C56 54 52 57 48 57Z" fill={brand.lime} />
-            </Svg>
+            <GrabitMark size={96} />
           )}
         </Animated.View>
       </View>
@@ -83,7 +77,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: fonts.display,
     fontSize: 22,
-    letterSpacing: -0.4,
+    letterSpacing: -0.2,
     color: colors.text,
     textAlign: 'center',
   },

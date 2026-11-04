@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
   Animated,
   Pressable,
   RefreshControl,
@@ -37,6 +36,7 @@ import { haptic } from '../utils/haptics';
 import { parseApiError } from '../utils/parseApiError';
 import { useLayout } from '../utils/responsive';
 
+import { appAlert } from '../context/DialogContext';
 const TAB_BAR_EXTRA = 72;
 /** scroll offset at which the compact header is fully shown */
 const MINI_AT = 300;
@@ -92,7 +92,7 @@ export function HomeScreen() {
       const msg = parseApiError(error, {
         fallback: 'Failed to load supermarkets. Please try again.',
       });
-      Alert.alert('Unable to Load Stores', msg);
+      appAlert('Unable to Load Stores', msg);
     } finally {
       setLoading(false);
     }
@@ -163,10 +163,10 @@ export function HomeScreen() {
       await selectAddressAsDefault(id);
       const address = addresses.find((a) => a.id === id);
       if (address) {
-        Alert.alert('Updated', `Delivering to ${formatAddressLabel(address)}`);
+        appAlert('Updated', `Delivering to ${formatAddressLabel(address)}`);
       }
     } catch (error: unknown) {
-      Alert.alert(
+      appAlert(
         'Unable to Update Address',
         parseApiError(error, {
           fallback: 'Could not set your default delivery address.',
@@ -197,8 +197,8 @@ export function HomeScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={brand.lime}
-            colors={[brand.basil, brand.tomato]}
+            tintColor={brand.green}
+            colors={[brand.green, brand.butter]}
             progressBackgroundColor={colors.surface}
             progressViewOffset={insets.top}
           />
@@ -211,7 +211,7 @@ export function HomeScreen() {
           onPressNotifications={() => navigateRoot('Notifications')}
         >
           <HomeSearchBar
-            onSubmit={() => Alert.alert('Search', 'Try opening a supermarket to search products there.')}
+            onSubmit={() => appAlert('Search', 'Try opening a supermarket to search products there.')}
             onPressFilter={() => setFilterOpen(true)}
             filterActive={isFilterActive}
           />
@@ -266,7 +266,7 @@ export function HomeScreen() {
           },
         ]}
       >
-        <GrabitLogo size={18} tone="dark" />
+        <GrabitLogo size={18} tone="brand" />
         <View style={styles.miniRight}>
           <Pressable
             onPress={() => setAddrOpen(true)}
@@ -274,7 +274,7 @@ export function HomeScreen() {
             accessibilityRole="button"
             accessibilityLabel={`Deliver to ${deliveryLine}`}
           >
-            <Ionicons name="location" size={14} color={brand.lime} />
+            <Ionicons name="location" size={14} color={brand.sprout} />
             <Text style={styles.miniAddrTxt} numberOfLines={1} maxFontSizeMultiplier={1.2}>
               {deliveryLine}
             </Text>
@@ -288,7 +288,7 @@ export function HomeScreen() {
             accessibilityRole="button"
             accessibilityLabel="Back to top and search"
           >
-            <Ionicons name="search" size={18} color={brand.oat} />
+            <Ionicons name="search" size={18} color="#FFFFFF" />
           </Pressable>
         </View>
       </Animated.View>
@@ -322,8 +322,8 @@ export function HomeScreen() {
                   accessibilityRole="radio"
                   accessibilityState={{ checked: on }}
                 >
-                  <View style={[styles.addrIcon, on && { backgroundColor: brand.basil }]}>
-                    <Ionicons name="location" size={18} color={on ? brand.oat : brand.basil} />
+                  <View style={[styles.addrIcon, on && { backgroundColor: brand.green }]}>
+                    <Ionicons name="location" size={18} color={on ? brand.cream : brand.green} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.addrLab}>{formatAddressLabel(a)}</Text>
@@ -334,7 +334,7 @@ export function HomeScreen() {
                   <Ionicons
                     name={on ? 'checkmark-circle' : 'ellipse-outline'}
                     size={22}
-                    color={on ? brand.basil : colors.textMuted}
+                    color={on ? brand.green : colors.textMuted}
                   />
                 </Pressable>
               );
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
     paddingBottom: spacing.md,
-    backgroundColor: brand.basil,
+    backgroundColor: brand.green,
     borderBottomLeftRadius: radii.xl,
     borderBottomRightRadius: radii.xl,
   },
@@ -388,17 +388,17 @@ const styles = StyleSheet.create({
     gap: 4,
     flexShrink: 1,
     maxWidth: 170,
-    backgroundColor: 'rgba(255,246,230,0.14)',
+    backgroundColor: 'rgba(255,255,255,0.16)',
     paddingHorizontal: spacing.md,
     paddingVertical: 7,
     borderRadius: radii.pill,
   },
-  miniAddrTxt: { fontFamily: fonts.semibold, fontSize: 13, color: brand.oat, flexShrink: 1 },
+  miniAddrTxt: { fontFamily: fonts.semibold, fontSize: 13, color: '#FFFFFF', flexShrink: 1 },
   miniBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,246,230,0.14)',
+    backgroundColor: 'rgba(255,255,255,0.16)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -416,12 +416,12 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     marginBottom: spacing.md,
   },
-  addrRowOn: { borderColor: colors.primary, backgroundColor: colors.mint },
+  addrRowOn: { borderColor: colors.primary, backgroundColor: colors.tint },
   addrIcon: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: colors.mint,
+    backgroundColor: colors.tint,
     alignItems: 'center',
     justifyContent: 'center',
   },

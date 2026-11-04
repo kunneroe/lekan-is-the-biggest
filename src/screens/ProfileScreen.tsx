@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GrabitMark } from '../components/brand/GrabitMark';
 import { GrabitLogo } from '../components/brand/GrabitWordmark';
@@ -13,6 +13,7 @@ import { navigateRoot } from '../navigation/navigationRef';
 import { brand, colors, fonts, radii, shadows, spacing } from '../theme';
 import { haptic } from '../utils/haptics';
 
+import { appAlert } from '../context/DialogContext';
 type Row = {
   key: string;
   label: string;
@@ -55,7 +56,7 @@ export function ProfileScreen() {
       icon: 'log-out-outline',
       destructive: true,
       onPress: () =>
-        Alert.alert('Log out', 'Sign out and return to the login screen?', [
+        appAlert('Log out', 'Sign out and return to the login screen?', [
           { text: 'Cancel', style: 'cancel' },
           {
             text: 'Log out',
@@ -76,7 +77,7 @@ export function ProfileScreen() {
     >
       {isFocused ? <StatusBar style="light" /> : null}
       <View style={[styles.panel, { paddingTop: insets.top + spacing.lg }]}>
-        <GrabitMark size={250} variant="mono" color="rgba(196,240,66,0.09)" style={styles.watermark} />
+        <GrabitMark size={250} variant="mono" color="rgba(185,232,58,0.12)" style={styles.watermark} />
         <View style={styles.panelTop}>
           <Text maxFontSizeMultiplier={1.25} style={styles.panelTitle}>Profile</Text>
           <Pressable
@@ -85,7 +86,7 @@ export function ProfileScreen() {
             accessibilityRole="button"
             accessibilityLabel="Notifications"
           >
-            <Ionicons name="notifications-outline" size={22} color={brand.oat} />
+            <Ionicons name="notifications-outline" size={22} color="#FFFFFF" />
           </Pressable>
         </View>
         <FadeInUp style={styles.me}>
@@ -95,11 +96,11 @@ export function ProfileScreen() {
             </View>
             <PressableScale
               style={styles.edit}
-              onPress={() => Alert.alert('Edit profile', 'Mock profile editor.')}
+              onPress={() => appAlert('Edit profile', 'Mock profile editor.')}
               accessibilityRole="button"
               accessibilityLabel="Edit profile"
             >
-              <Ionicons name="pencil" size={13} color={brand.forest} />
+              <Ionicons name="pencil" size={13} color={brand.ink} />
             </PressableScale>
           </View>
           <View style={{ flex: 1 }}>
@@ -121,7 +122,7 @@ export function ProfileScreen() {
           <FadeInUp key={q.key} index={i} style={{ flex: 1 }}>
             <PressableScale onPress={q.onPress} hapticFeedback style={styles.quick} accessibilityRole="button">
               <View style={styles.quickIcon}>
-                <Ionicons name={q.icon} size={20} color={brand.oat} />
+                <Ionicons name={q.icon} size={20} color={brand.cream} />
               </View>
               <Text style={styles.quickTxt}>{q.label}</Text>
             </PressableScale>
@@ -161,7 +162,7 @@ function MenuRow({ row, showDivider }: { row: Row; showDivider: boolean }) {
         }}
         accessibilityRole="button"
       >
-        <View style={[styles.rowIcon, row.destructive && { backgroundColor: colors.tomatoTint }]}>
+        <View style={[styles.rowIcon, row.destructive && { backgroundColor: colors.redTint }]}>
           <Ionicons name={row.icon} size={20} color={row.destructive ? colors.danger : colors.primary} />
         </View>
         <Text style={[styles.rowLabel, row.destructive && { color: colors.danger }]}>{row.label}</Text>
@@ -175,7 +176,7 @@ function MenuRow({ row, showDivider }: { row: Row; showDivider: boolean }) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   panel: {
-    backgroundColor: brand.basil,
+    backgroundColor: brand.green,
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xxxl + spacing.xl,
     borderBottomLeftRadius: radii.xxl,
@@ -184,12 +185,12 @@ const styles = StyleSheet.create({
   },
   watermark: { position: 'absolute', right: -70, top: -20 },
   panelTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  panelTitle: { fontFamily: fonts.display, fontSize: 30, letterSpacing: -0.8, color: brand.oat },
+  panelTitle: { fontFamily: fonts.display, fontSize: 30, letterSpacing: -0.3, color: '#FFFFFF' },
   bell: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255,246,230,0.14)',
+    backgroundColor: 'rgba(255,255,255,0.16)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -199,13 +200,13 @@ const styles = StyleSheet.create({
     width: 76,
     height: 76,
     borderRadius: 38,
-    backgroundColor: brand.lime,
+    backgroundColor: brand.butter,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: brand.oat,
+    borderColor: '#FFFFFF',
   },
-  avatarTxt: { fontFamily: fonts.display, fontSize: 28, color: brand.forest },
+  avatarTxt: { fontFamily: fonts.display, fontSize: 28, color: brand.ink },
   edit: {
     position: 'absolute',
     right: -4,
@@ -213,12 +214,12 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: brand.oat,
+    backgroundColor: brand.cream,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  name: { fontFamily: fonts.display, fontSize: 22, letterSpacing: -0.4, color: brand.oat },
-  contact: { fontFamily: fonts.regular, fontSize: 14, color: brand.oat, opacity: 0.85, marginTop: 2 },
+  name: { fontFamily: fonts.display, fontSize: 22, letterSpacing: -0.2, color: '#FFFFFF' },
+  contact: { fontFamily: fonts.medium, fontSize: 14, color: brand.cream, opacity: 0.92, marginTop: 2 },
   quickRow: {
     flexDirection: 'row',
     gap: spacing.md,
@@ -238,7 +239,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: brand.forest,
+    backgroundColor: brand.ink,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -265,7 +266,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: radii.md,
-    backgroundColor: colors.mint,
+    backgroundColor: colors.tint,
     alignItems: 'center',
     justifyContent: 'center',
   },
