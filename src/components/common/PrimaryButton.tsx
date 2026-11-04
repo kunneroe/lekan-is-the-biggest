@@ -1,6 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
-import { colors, radii, spacing } from '../../theme';
+import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { brand, colors, fonts, radii, spacing } from '../../theme';
+import { GrabitLoader } from '../brand/GrabitLoader';
+import { PressableScale } from '../motion/PressableScale';
+
+type Variant = 'primary' | 'secondary' | 'dark';
 
 type Props = {
   label: string;
@@ -8,56 +12,69 @@ type Props = {
   icon?: keyof typeof Ionicons.glyphMap;
   loading?: boolean;
   disabled?: boolean;
+  variant?: Variant;
+  style?: StyleProp<ViewStyle>;
 };
 
-export function PrimaryButton({ label, onPress, icon, loading = false, disabled = false }: Props) {
+export function PrimaryButton({
+  label,
+  onPress,
+  icon,
+  loading = false,
+  disabled = false,
+  variant = 'primary',
+  style,
+}: Props) {
+  const fg = variant === 'secondary' ? colors.primary : colors.surface;
   return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.btn,
-        disabled && styles.disabled,
-        pressed && !disabled && styles.pressed,
-      ]}
-      onPress={disabled ? undefined : onPress}
+    <PressableScale
+      accessibilityRole="button"
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
+      onPress={disabled || loading ? undefined : onPress}
       disabled={disabled || loading}
+      hapticFeedback
+      containerStyle={{ width: '100%' }}
+      style={[
+        styles.btn,
+        variant === 'secondary' && styles.secondary,
+        variant === 'dark' && styles.dark,
+        disabled && !loading && styles.disabled,
+        style,
+      ]}
     >
       {loading ? (
-        <ActivityIndicator color={colors.surface} size="small" />
+        <View style={styles.row}>
+          <GrabitLoader size={22} variant={variant === 'secondary' ? 'color' : 'reverse'} />
+          <Text style={[styles.label, { color: fg }]}>{label}</Text>
+        </View>
       ) : (
-        <>
-          <Text style={styles.label}>{label}</Text>
-          {icon ? (
-            <Ionicons name={icon} size={20} color={colors.surface} style={styles.icon} />
-          ) : null}
-        </>
+        <View style={styles.row}>
+          <Text style={[styles.label, { color: fg }]}>{label}</Text>
+          {icon ? <Ionicons name={icon} size={20} color={fg} /> : null}
+        </View>
       )}
-    </Pressable>
+    </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
   btn: {
     width: '100%',
+    minHeight: 56,
     backgroundColor: colors.primary,
     borderRadius: radii.lg,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.xl,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  label: {
-    color: colors.surface,
-    fontWeight: '800',
-    fontSize: 16,
+  secondary: {
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.mintStrong,
   },
-  icon: {
-    marginLeft: spacing.sm,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  pressed: {
-    opacity: 0.9,
-  },
+  dark: { backgroundColor: brand.forest },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
+  label: { fontFamily: fonts.bold, fontSize: 16 },
+  disabled: { opacity: 0.5 },
 });

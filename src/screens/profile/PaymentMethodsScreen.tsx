@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, radii, spacing } from '../../theme';
+import { colors, radii, spacing, fonts } from '../../theme';
 
 const METHODS = [
   { id: '1', label: 'Visa •••• 4242', sub: 'Expires 08/27' },
@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  lab: { fontWeight: '700', color: colors.text },
+  lab: { fontFamily: fonts.bold, color: colors.text },
   sub: { color: colors.textSecondary, fontSize: 12, marginTop: 2 },
   add: {
     flexDirection: 'row',
@@ -65,5 +65,5 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     marginTop: spacing.md,
   },
-  addTxt: { color: colors.primary, fontWeight: '700' },
+  addTxt: { color: colors.primary, fontFamily: fonts.bold },
 });

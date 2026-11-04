@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { navigateRoot } from '../../navigation/navigationRef';
 import { orderService } from '../../services/orderService';
-import { colors, radii, shadows, spacing, typography } from '../../theme';
+import { GrabitLoader } from '../../components/brand/GrabitLoader';
+import { colors, radii, shadows, spacing, typography, fonts } from '../../theme';
 import { cancellationText } from '../../utils/orderStatus';
 
 export function OrderHistoryScreen() {
@@ -28,7 +29,7 @@ export function OrderHistoryScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <GrabitLoader size={44} />
       </View>
     );
   }
@@ -130,7 +131,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     borderRadius: radii.md,
   },
-  emptyBtnTxt: { color: colors.surface, fontWeight: '800' },
+  emptyBtnTxt: { color: colors.surface, fontFamily: fonts.black },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -152,17 +153,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   main: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  reason: { color: colors.danger, fontSize: 12, fontWeight: '600', marginTop: 2 },
+  reason: { color: colors.danger, fontSize: 12, fontFamily: fonts.semibold, marginTop: 2 },
   reorder: {
-    backgroundColor: '#FFF3E0',
+    backgroundColor: colors.lime,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radii.pill,
   },
-  reorderTxt: { color: colors.bannerOrange, fontWeight: '700', fontSize: 12 },
-  store: { fontWeight: '800', color: colors.text },
+  reorderTxt: { color: colors.forest, fontFamily: fonts.bold, fontSize: 12 },
+  store: { fontFamily: fonts.black, color: colors.text },
   meta: { color: colors.textSecondary, fontSize: 12, marginTop: 4 },
-  delivered: { color: colors.open, fontWeight: '700' },
-  cancelled: { color: colors.danger, fontWeight: '700' },
-  price: { fontWeight: '800', color: colors.primary },
+  delivered: { color: colors.open, fontFamily: fonts.bold },
+  cancelled: { color: colors.danger, fontFamily: fonts.bold },
+  price: { fontFamily: fonts.black, color: colors.primary },
 });

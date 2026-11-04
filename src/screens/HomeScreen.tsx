@@ -1,44 +1,44 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
+import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GrabitLoader } from '../components/brand/GrabitLoader';
+import { BottomSheet } from '../components/common/BottomSheet';
+import { EmptyState } from '../components/common/EmptyState';
+import { PrimaryButton } from '../components/common/PrimaryButton';
 import { CategoryPillGrid } from '../components/home/CategoryPillGrid';
 import { HomeHeader } from '../components/home/HomeHeader';
 import { HomeSearchBar } from '../components/home/HomeSearchBar';
 import { PromoBannerCarousel } from '../components/home/PromoBannerCarousel';
 import { SectionHeader } from '../components/home/SectionHeader';
 import { SupermarketListCard } from '../components/home/SupermarketListCard';
-import {
-  FilterPanelModal,
-  DEFAULT_FILTERS,
-  type FilterState,
-} from '../components/home/FilterPanelModal';
+import { FilterPanelModal, DEFAULT_FILTERS, type FilterState } from '../components/home/FilterPanelModal';
+import { FadeInUp } from '../components/motion/FadeInUp';
+import { StoreCardSkeleton } from '../components/motion/Skeleton';
 import { useAddresses } from '../context/AddressContext';
 import { categoryService } from '../services/categoryService';
 import { supermarketService } from '../services/supermarketService';
 import { navigateRoot } from '../navigation/navigationRef';
-import { colors, radii, spacing } from '../theme';
-import {
-  formatAddressLabel,
-  formatAddressLine,
-  formatAddressShortLine,
-} from '../utils/addressFormat';
+import { brand, colors, fonts, radii, spacing } from '../theme';
+import { formatAddressLabel, formatAddressLine, formatAddressShortLine } from '../utils/addressFormat';
 import { toCategoryGridItems, type ApiCategory } from '../utils/catalogFormat';
+import { haptic } from '../utils/haptics';
 import { parseApiError } from '../utils/parseApiError';
 
-const TAB_BAR_EXTRA = 64;
+const TAB_BAR_EXTRA = 72;
+
+function greetingForNow() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const isFocused = useIsFocused();
   const {
     addresses,
     selectedAddressId,
@@ -55,6 +55,7 @@ export function HomeScreen() {
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [supermarkets, setSupermarkets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -62,26 +63,34 @@ export function HomeScreen() {
     }, [refreshAddresses]),
   );
 
-  useEffect(() => {
-    const fetchHomeData = async () => {
-      try {
-        const [storeData, categoryList] = await Promise.all([
-          supermarketService.getSupermarkets(),
-          categoryService.getCategories(),
-        ]);
-        setSupermarkets(storeData.supermarkets || storeData || []);
-        setCategories(categoryList);
-      } catch (error: unknown) {
-        const msg = parseApiError(error, {
-          fallback: 'Failed to load supermarkets. Please try again.',
-        });
-        Alert.alert('Unable to Load Stores', msg);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchHomeData();
+  const fetchHomeData = useCallback(async () => {
+    try {
+      const [storeData, categoryList] = await Promise.all([
+        supermarketService.getSupermarkets(),
+        categoryService.getCategories(),
+      ]);
+      setSupermarkets(storeData.supermarkets || storeData || []);
+      setCategories(categoryList);
+    } catch (error: unknown) {
+      const msg = parseApiError(error, {
+        fallback: 'Failed to load supermarkets. Please try again.',
+      });
+      Alert.alert('Unable to Load Stores', msg);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchHomeData();
+  }, [fetchHomeData]);
+
+  const onRefresh = useCallback(async () => {
+    haptic.tap();
+    setRefreshing(true);
+    await Promise.all([fetchHomeData(), refreshAddresses()]);
+    setRefreshing(false);
+  }, [fetchHomeData, refreshAddresses]);
 
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId);
   const deliveryLine = selectedAddress
@@ -121,10 +130,7 @@ export function HomeScreen() {
 
   // True when any filter differs from its default value
   const isFilterActive =
-    filters.sortByRating ||
-    filters.area !== null ||
-    filters.openNowOnly ||
-    filters.freeDeliveryOnly;
+    filters.sortByRating || filters.area !== null || filters.openNowOnly || filters.freeDeliveryOnly;
 
   const openStore = (storeId?: string, categoryId?: string) => {
     if (storeId) {
@@ -133,6 +139,7 @@ export function HomeScreen() {
   };
 
   const handleSelectAddress = async (id: string) => {
+    haptic.select();
     setSelectedAddressId(id);
     setAddrOpen(false);
     try {
@@ -153,119 +160,138 @@ export function HomeScreen() {
 
   return (
     <View style={styles.screen}>
+      {isFocused ? <StatusBar style="light" /> : null}
       <ScrollView
-        contentContainerStyle={[
-          styles.scroll,
-          {
-            paddingTop: Math.max(insets.top, spacing.lg),
-            paddingBottom: insets.bottom + TAB_BAR_EXTRA + spacing.xl,
-          },
-        ]}
+        contentContainerStyle={{ paddingBottom: insets.bottom + TAB_BAR_EXTRA + spacing.xl }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={brand.lime}
+            colors={[brand.basil, brand.tomato]}
+            progressBackgroundColor={colors.surface}
+            progressViewOffset={insets.top}
+          />
+        }
       >
         <HomeHeader
-          greeting="Good morning!"
+          greeting={greetingForNow()}
           deliveryLine={deliveryLine}
           onPressDelivery={() => setAddrOpen(true)}
           onPressNotifications={() => navigateRoot('Notifications')}
-        />
-        <HomeSearchBar
-          onSubmit={() =>
-            Alert.alert(
-              'Search',
-              'Try opening a supermarket to search products there.',
-            )
-          }
-          onPressFilter={() => setFilterOpen(true)}
-          filterActive={isFilterActive}
-        />
-        <PromoBannerCarousel />
-        <SectionHeader title="Categories" />
-        <CategoryPillGrid
-          categories={toCategoryGridItems(categories)}
-          selectedId={homeCategory}
-          onSelect={(id) => {
-            setHomeCategory(id);
-            openStore(supermarkets.length > 0 ? supermarkets[0].id : undefined, id);
-          }}
-        />
-        <View style={styles.sectionSpacer} />
-        <SectionHeader
-          title="Supermarkets Near You"
-          actionLabel="View all"
-          onPressAction={() => navigateRoot('AllSupermarkets')}
-        />
+        >
+          <HomeSearchBar
+            onSubmit={() => Alert.alert('Search', 'Try opening a supermarket to search products there.')}
+            onPressFilter={() => setFilterOpen(true)}
+            filterActive={isFilterActive}
+          />
+        </HomeHeader>
 
-        {loading ? (
-          <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: spacing.xl }} />
-        ) : filteredSupermarkets.length === 0 ? (
-          <View style={styles.emptyFilterWrap}>
-            <Text style={styles.emptyFilterTitle}>No stores match your filters</Text>
-            <Text style={styles.emptyFilterSub}>
-              Try adjusting or clearing your filters to see more stores.
-            </Text>
-            <Pressable
-              style={styles.clearFiltersBtn}
-              onPress={() => setFilters(DEFAULT_FILTERS)}
-            >
-              <Text style={styles.clearFiltersBtnTxt}>Clear filters</Text>
-            </Pressable>
-          </View>
-        ) : (
-          filteredSupermarkets.map((store) => (
-            <SupermarketListCard
-              key={store.id}
-              store={store}
-              onPress={() => openStore(store.id)}
+        <View style={styles.body}>
+          <PromoBannerCarousel />
+
+          {categories.length > 0 ? (
+            <>
+              <SectionHeader title="Shop by category" />
+              <CategoryPillGrid
+                categories={toCategoryGridItems(categories)}
+                selectedId={homeCategory}
+                onSelect={(id) => {
+                  setHomeCategory(id);
+                  openStore(supermarkets.length > 0 ? supermarkets[0].id : undefined, id);
+                }}
+              />
+              <View style={styles.sectionSpacer} />
+            </>
+          ) : null}
+
+          <SectionHeader
+            title="Supermarkets near you"
+            actionLabel="View all"
+            onPressAction={() => navigateRoot('AllSupermarkets')}
+            accessory={refreshing ? <GrabitLoader size={20} /> : null}
+          />
+
+          {loading ? (
+            [0, 1, 2].map((i) => <StoreCardSkeleton key={i} index={i} />)
+          ) : filteredSupermarkets.length === 0 ? (
+            <EmptyState
+              art="search"
+              title="No stores match your filters"
+              body="Try adjusting or clearing your filters to see more stores."
+              actionLabel="Clear filters"
+              onAction={() => setFilters(DEFAULT_FILTERS)}
             />
-          ))
-        )}
+          ) : (
+            filteredSupermarkets.map((store, i) => (
+              <FadeInUp key={store.id} index={i}>
+                <SupermarketListCard store={store} onPress={() => openStore(store.id)} />
+              </FadeInUp>
+            ))
+          )}
+        </View>
       </ScrollView>
 
-      <Modal visible={addrOpen} transparent animationType="fade">
-        <View style={styles.modalWrap}>
-          <Pressable
-            style={styles.modalBackdrop}
-            onPress={() => setAddrOpen(false)}
-          />
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Delivery address</Text>
-            {addressesLoading ? (
-              <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: spacing.lg }} />
-            ) : addresses.length === 0 ? (
-              <View style={styles.emptyWrap}>
-                <Text style={styles.emptyText}>No saved addresses yet.</Text>
-                <Pressable
-                  style={styles.addBtn}
-                  onPress={() => {
-                    setAddrOpen(false);
-                    navigateRoot('SavedAddresses');
-                  }}
-                >
-                  <Text style={styles.addBtnTxt}>Add an address</Text>
-                </Pressable>
-              </View>
-            ) : (
-              addresses.map((a) => (
+      <BottomSheet visible={addrOpen} onClose={() => setAddrOpen(false)} title="Deliver to">
+        {addressesLoading ? (
+          <View style={styles.sheetLoading}>
+            <GrabitLoader size={32} />
+          </View>
+        ) : addresses.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <Text style={styles.emptyText}>No saved addresses yet.</Text>
+            <PrimaryButton
+              label="Add an address"
+              icon="add"
+              onPress={() => {
+                setAddrOpen(false);
+                navigateRoot('SavedAddresses');
+              }}
+            />
+          </View>
+        ) : (
+          <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false}>
+            {addresses.map((a) => {
+              const on = selectedAddressId === a.id;
+              return (
                 <Pressable
                   key={a.id}
-                  style={[
-                    styles.modalRow,
-                    selectedAddressId === a.id && styles.modalRowOn,
-                  ]}
+                  style={[styles.addrRow, on && styles.addrRowOn]}
                   onPress={() => void handleSelectAddress(a.id)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: on }}
                 >
-                  <Text style={styles.modalLab}>{formatAddressLabel(a)}</Text>
-                  <Text style={styles.modalLine}>{formatAddressLine(a)}</Text>
+                  <View style={[styles.addrIcon, on && { backgroundColor: brand.basil }]}>
+                    <Ionicons name="location" size={18} color={on ? brand.oat : brand.basil} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.addrLab}>{formatAddressLabel(a)}</Text>
+                    <Text style={styles.addrLine} numberOfLines={2}>
+                      {formatAddressLine(a)}
+                    </Text>
+                  </View>
+                  <Ionicons
+                    name={on ? 'checkmark-circle' : 'ellipse-outline'}
+                    size={22}
+                    color={on ? brand.basil : colors.textMuted}
+                  />
                 </Pressable>
-              ))
-            )}
-            <Pressable onPress={() => setAddrOpen(false)}>
-              <Text style={styles.modalClose}>Close</Text>
+              );
+            })}
+            <Pressable
+              style={styles.manage}
+              onPress={() => {
+                setAddrOpen(false);
+                navigateRoot('SavedAddresses');
+              }}
+            >
+              <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+              <Text style={styles.manageTxt}>Add or manage addresses</Text>
             </Pressable>
-          </View>
-        </View>
-      </Modal>
+          </ScrollView>
+        )}
+      </BottomSheet>
 
       <FilterPanelModal
         visible={filterOpen}
@@ -279,104 +305,39 @@ export function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scroll: {
-    paddingHorizontal: spacing.xl,
-  },
-  sectionSpacer: {
-    height: spacing.xxl,
-  },
-  modalWrap: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  modalCard: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: spacing.xl,
-    paddingBottom: spacing.xxl,
-    zIndex: 1,
-  },
-  modalTitle: {
-    fontWeight: '800',
-    fontSize: 18,
-    marginBottom: spacing.lg,
-    color: colors.text,
-  },
-  modalRow: {
+  screen: { flex: 1, backgroundColor: colors.background },
+  body: { paddingHorizontal: spacing.xl },
+  sectionSpacer: { height: spacing.xxl },
+  sheetLoading: { paddingVertical: spacing.xl, alignItems: 'center' },
+  emptyWrap: { alignItems: 'center', paddingVertical: spacing.md, gap: spacing.lg },
+  emptyText: { fontFamily: fonts.regular, fontSize: 15, color: colors.textSecondary, textAlign: 'center' },
+  addrRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
     padding: spacing.lg,
-    borderRadius: radii.md,
-    borderWidth: 1,
+    borderRadius: radii.lg,
+    borderWidth: 1.5,
     borderColor: colors.border,
     marginBottom: spacing.md,
   },
-  modalRowOn: {
-    borderColor: colors.primary,
+  addrRowOn: { borderColor: colors.primary, backgroundColor: colors.mint },
+  addrIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: colors.mint,
-  },
-  modalLab: { fontWeight: '800', color: colors.text },
-  modalLine: { color: colors.textSecondary, marginTop: 4, fontSize: 13 },
-  modalClose: {
-    textAlign: 'center',
-    marginTop: spacing.lg,
-    color: colors.primary,
-    fontWeight: '700',
-  },
-  emptyWrap: {
     alignItems: 'center',
-    paddingVertical: spacing.lg,
-    gap: spacing.md,
+    justifyContent: 'center',
   },
-  emptyText: {
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  addBtn: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    borderRadius: radii.md,
-  },
-  addBtnTxt: {
-    color: colors.surface,
-    fontWeight: '700',
-  },
-  emptyFilterWrap: {
+  addrLab: { fontFamily: fonts.bold, fontSize: 15, color: colors.text },
+  addrLine: { fontFamily: fonts.regular, fontSize: 13, color: colors.textSecondary, marginTop: 2 },
+  manage: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.xxxl,
+    justifyContent: 'center',
     gap: spacing.sm,
-  },
-  emptyFilterTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.text,
-    textAlign: 'center',
-  },
-  emptyFilterSub: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-    paddingHorizontal: spacing.xl,
-  },
-  clearFiltersBtn: {
-    marginTop: spacing.md,
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-    backgroundColor: colors.primary,
-    borderRadius: radii.md,
   },
-  clearFiltersBtnTxt: {
-    color: colors.surface,
-    fontWeight: '700',
-    fontSize: 14,
-  },
+  manageTxt: { fontFamily: fonts.bold, fontSize: 15, color: colors.primary },
 });

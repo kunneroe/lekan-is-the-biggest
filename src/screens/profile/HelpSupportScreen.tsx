@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, radii, spacing } from '../../theme';
+import { colors, radii, spacing, fonts } from '../../theme';
 
 export function HelpSupportScreen() {
   const insets = useSafeAreaInsets();
@@ -59,5 +59,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  btnTxt: { fontWeight: '700', color: colors.text },
+  btnTxt: { fontFamily: fonts.bold, color: colors.text },
 });

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { navigateRoot } from '../../navigation/navigationRef';
-import { colors, radii, spacing } from '../../theme';
+import { colors, radii, spacing, fonts } from '../../theme';
 
 export function SettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  lab: { fontWeight: '600', color: colors.text },
+  lab: { fontFamily: fonts.semibold, color: colors.text },
   link: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -66,6 +66,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  linkTxt: { flex: 1, fontWeight: '600', color: colors.text },
+  linkTxt: { flex: 1, fontFamily: fonts.semibold, color: colors.text },
   ver: { textAlign: 'center', color: colors.textMuted, marginTop: spacing.xl },
 });

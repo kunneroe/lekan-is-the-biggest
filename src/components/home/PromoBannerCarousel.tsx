@@ -1,160 +1,143 @@
-import {
-  Alert,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { colors, radii, spacing, typography } from '../../theme';
-
-const GREEN_IMG =
-  'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=800&q=80';
+import { useRef } from 'react';
+import { Alert, Animated, Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { brand, fonts, radii, spacing } from '../../theme';
+import { GrabitMark } from '../brand/GrabitMark';
+import { PressableScale } from '../motion/PressableScale';
 
 type Banner = {
   id: string;
   title: string;
   subtitle: string;
   cta: string;
-  backgroundColor: string;
+  bg: string;
+  fg: string;
+  ctaBg: string;
+  ctaFg: string;
+  mark: string;
   image: string;
-  ctaStyle: 'darkOnLight' | 'lightOnDark';
 };
 
 const BANNERS: Banner[] = [
   {
     id: '1',
     title: 'Free delivery on your first order',
-    subtitle: 'Enjoy zero delivery fees on all local markets today.',
-    cta: 'Claim Now',
-    backgroundColor: colors.primaryDark,
-    image: GREEN_IMG,
-    ctaStyle: 'darkOnLight',
+    subtitle: 'Zero delivery fees on local markets today.',
+    cta: 'Claim now',
+    bg: brand.forest,
+    fg: brand.oat,
+    ctaBg: brand.lime,
+    ctaFg: brand.forest,
+    mark: 'rgba(196,240,66,0.12)',
+    image: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=800&q=80',
   },
   {
     id: '2',
     title: 'Weekend flash deals',
     subtitle: 'Save on pantry staples from partner stores.',
-    cta: 'Shop Deals',
-    backgroundColor: colors.bannerOrange,
-    image:
-      'https://images.unsplash.com/photo-1606787366850-de6330120b65?w=800&q=80',
-    ctaStyle: 'lightOnDark',
+    cta: 'Shop deals',
+    bg: brand.tomato,
+    fg: brand.forest,
+    ctaBg: brand.forest,
+    ctaFg: brand.oat,
+    mark: 'rgba(10,46,31,0.10)',
+    image: 'https://images.unsplash.com/photo-1606787366850-de6330120b65?w=800&q=80',
+  },
+  {
+    id: '3',
+    title: 'Grab it in minutes',
+    subtitle: 'Track your rider live from store to door.',
+    cta: 'Learn more',
+    bg: brand.lime,
+    fg: brand.forest,
+    ctaBg: brand.basil,
+    ctaFg: brand.oat,
+    mark: 'rgba(14,124,74,0.14)',
+    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80',
   },
 ];
 
 export function PromoBannerCarousel() {
+  const { width } = useWindowDimensions();
+  const cardW = Math.min(width - 56, 360);
+  const gap = spacing.md;
+  const scrollX = useRef(new Animated.Value(0)).current;
+
   return (
-    <ScrollView
-      horizontal={true}
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.carousel}
-      decelerationRate="fast"
-      snapToInterval={316}
-    >
-      {BANNERS.map((b) => (
-        <View
-          key={b.id}
-          style={[styles.card, { backgroundColor: b.backgroundColor }]}
-        >
-          <View style={styles.textCol}>
-            <Text style={[styles.title, typography.bannerTitle]}>{b.title}</Text>
-            <Text style={[styles.subtitle, typography.bannerSubtitle]}>
-              {b.subtitle}
-            </Text>
-            <Pressable
-              style={[
-                styles.cta,
-                b.ctaStyle === 'darkOnLight'
-                  ? styles.ctaLight
-                  : styles.ctaDark,
-              ]}
-              onPress={() =>
-                Alert.alert(b.cta, 'Promo applied to your next order (demo).')
-              }
-            >
-              <Text
-                style={[
-                  styles.ctaText,
-                  b.ctaStyle === 'darkOnLight'
-                    ? styles.ctaTextDark
-                    : styles.ctaTextLight,
-                ]}
+    <View style={styles.wrap}>
+      <Animated.ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: spacing.xl, gap }}
+        decelerationRate="fast"
+        snapToInterval={cardW + gap}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], { useNativeDriver: true })}
+        scrollEventThrottle={16}
+      >
+        {BANNERS.map((b) => (
+          <View key={b.id} style={[styles.card, { width: cardW, backgroundColor: b.bg }]}>
+            <GrabitMark size={190} variant="mono" color={b.mark} style={styles.mark} />
+            <View style={styles.textCol}>
+              <Text style={[styles.title, { color: b.fg }]}>{b.title}</Text>
+              <Text style={[styles.subtitle, { color: b.fg }]}>{b.subtitle}</Text>
+              <PressableScale
+                hapticFeedback
+                onPress={() => Alert.alert(b.cta, 'Promo applied to your next order (demo).')}
+                style={[styles.cta, { backgroundColor: b.ctaBg }]}
+                accessibilityRole="button"
               >
-                {b.cta}
-              </Text>
-            </Pressable>
+                <Text style={[styles.ctaText, { color: b.ctaFg }]}>{b.cta}</Text>
+              </PressableScale>
+            </View>
+            <Image source={{ uri: b.image }} style={styles.image} />
           </View>
-          <View style={styles.imageCol}>
-            <Image source={{ uri: b.image }} style={styles.bannerImage} />
-          </View>
-        </View>
-      ))}
-    </ScrollView>
+        ))}
+      </Animated.ScrollView>
+      <View style={styles.dots}>
+        {BANNERS.map((b, i) => {
+          const input = [(i - 1) * (cardW + gap), i * (cardW + gap), (i + 1) * (cardW + gap)];
+          return (
+            <Animated.View
+              key={b.id}
+              style={[
+                styles.dot,
+                {
+                  opacity: scrollX.interpolate({ inputRange: input, outputRange: [0.3, 1, 0.3], extrapolate: 'clamp' }),
+                  transform: [
+                    { scaleX: scrollX.interpolate({ inputRange: input, outputRange: [1, 2.6, 1], extrapolate: 'clamp' }) },
+                  ],
+                },
+              ]}
+            />
+          );
+        })}
+      </View>
+    </View>
   );
 }
 
-const CARD_W = 300;
-
 const styles = StyleSheet.create({
-  carousel: {
-    paddingBottom: spacing.lg,
-    gap: spacing.md,
-  },
+  wrap: { marginHorizontal: -spacing.xl, marginBottom: spacing.xl },
   card: {
-    width: CARD_W,
-    minHeight: 140,
-    borderRadius: radii.lg,
+    minHeight: 160,
+    borderRadius: radii.xl,
     flexDirection: 'row',
     overflow: 'hidden',
-    padding: spacing.lg,
+    padding: spacing.lg + 2,
   },
-  textCol: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingRight: spacing.sm,
+  mark: { position: 'absolute', right: -50, bottom: -60 },
+  textCol: { flex: 1, justifyContent: 'center', paddingRight: spacing.sm },
+  title: { fontFamily: fonts.display, fontSize: 21, lineHeight: 24, letterSpacing: -0.4, marginBottom: spacing.xs },
+  subtitle: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, opacity: 0.9, marginBottom: spacing.md },
+  cta: { alignSelf: 'flex-start', paddingVertical: spacing.sm + 1, paddingHorizontal: spacing.lg, borderRadius: radii.pill },
+  ctaText: { fontFamily: fonts.bold, fontSize: 14 },
+  image: {
+    width: 92,
+    height: 92,
+    borderRadius: 46,
+    alignSelf: 'flex-end',
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.85)',
   },
-  title: {
-    color: colors.surface,
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    color: 'rgba(255,255,255,0.9)',
-    marginBottom: spacing.md,
-    lineHeight: 18,
-  },
-  cta: {
-    alignSelf: 'flex-start',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radii.md,
-  },
-  ctaLight: {
-    backgroundColor: colors.surface,
-  },
-  ctaDark: {
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
-  },
-  ctaText: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  ctaTextDark: {
-    color: colors.text,
-  },
-  ctaTextLight: {
-    color: colors.surface,
-  },
-  imageCol: {
-    width: 88,
-    justifyContent: 'flex-end',
-  },
-  bannerImage: {
-    width: 88,
-    height: 88,
-    borderRadius: radii.md,
-  },
+  dots: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: spacing.md },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: brand.basil },
 });

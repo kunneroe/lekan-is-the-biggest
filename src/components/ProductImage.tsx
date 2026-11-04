@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Image, StyleSheet, Text, View, type ImageStyle, type StyleProp } from 'react-native';
-import { colors, radii } from '../theme';
+import { Image, StyleSheet, View, type ImageStyle, type StyleProp, type ViewStyle } from 'react-native';
+import { colors } from '../theme';
+import { GrabitMark } from './brand/GrabitMark';
 
 type Props = {
   uri: string | null | undefined;
@@ -8,29 +9,41 @@ type Props = {
   label?: string;
 };
 
-export function ProductImage({ uri, style, label = 'Goshop' }: Props) {
+/** Product photo with a branded placeholder when the image is missing or fails. */
+export function ProductImage({ uri, style, label = 'Product' }: Props) {
   const [failed, setFailed] = useState(false);
-  const fallback = 'https://placehold.co/150x150/png?text=No+Image';
+
+  if (!uri || failed) {
+    const flat = StyleSheet.flatten(style) || {};
+    const h = typeof flat.height === 'number' ? flat.height : 64;
+    return (
+      <View
+        accessible
+        accessibilityRole="image"
+        accessibilityLabel={label}
+        style={[styles.ph, style as StyleProp<ViewStyle>]}
+      >
+        <GrabitMark size={Math.max(20, Math.min(56, h * 0.4))} variant="mono" color={colors.mintStrong} />
+      </View>
+    );
+  }
 
   return (
     <Image
-      source={{ uri: failed || !uri ? fallback : uri }}
-      style={style}
+      source={{ uri }}
+      style={[styles.img, style]}
       onError={() => setFailed(true)}
+      accessibilityLabel={label}
     />
   );
 }
 
 const styles = StyleSheet.create({
+  img: { backgroundColor: colors.sand },
   ph: {
     backgroundColor: colors.mint,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radii.md,
-  },
-  phText: {
-    fontWeight: '800',
-    color: colors.primary,
-    fontSize: 14,
+    overflow: 'hidden',
   },
 });

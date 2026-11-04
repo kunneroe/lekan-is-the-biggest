@@ -3,7 +3,6 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/navigationRef';
 import {
-  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -17,7 +16,8 @@ import { ProductImage } from '../../components/ProductImage';
 import { useFavorites } from '../../context/FavoriteContext';
 import { cartService } from '../../services/cartService';
 import { navigateRoot } from '../../navigation/navigationRef';
-import { colors, radii, shadows, spacing, typography } from '../../theme';
+import { GrabitLoader } from '../../components/brand/GrabitLoader';
+import { colors, radii, shadows, spacing, typography, fonts } from '../../theme';
 import { getProductImageUrl } from '../../utils/catalogFormat';
 import { parseApiError } from '../../utils/parseApiError';
 
@@ -30,7 +30,7 @@ export function FavoritesScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <GrabitLoader size={44} />
       </View>
     );
   }
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     borderRadius: radii.md,
   },
-  emptyBtnTxt: { color: colors.surface, fontWeight: '800' },
+  emptyBtnTxt: { color: colors.surface, fontFamily: fonts.black },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radii.lg,
@@ -169,9 +169,9 @@ const styles = StyleSheet.create({
   },
   row: { flexDirection: 'row', gap: spacing.md, padding: spacing.lg },
   img: { width: 88, height: 88, borderRadius: radii.md },
-  name: { fontWeight: '800', color: colors.text },
+  name: { fontFamily: fonts.black, color: colors.text },
   store: { color: colors.textSecondary, fontSize: 12, marginTop: 4 },
-  price: { fontWeight: '800', color: colors.primary, marginTop: spacing.sm },
+  price: { fontFamily: fonts.black, color: colors.primary, marginTop: spacing.sm },
   actions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -189,5 +189,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radii.md,
   },
-  addTxt: { color: colors.surface, fontWeight: '800' },
+  addTxt: { color: colors.surface, fontFamily: fonts.black },
 });

@@ -1,16 +1,12 @@
 import { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Alert, FlatList, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { EmptyState } from '../components/common/EmptyState';
 import { SupermarketListCard } from '../components/home/SupermarketListCard';
+import { FadeInUp } from '../components/motion/FadeInUp';
+import { StoreCardSkeleton } from '../components/motion/Skeleton';
 import type { RootStackParamList } from '../navigation/navigationRef';
 import { supermarketService } from '../services/supermarketService';
 import { colors, spacing } from '../theme';
@@ -19,8 +15,7 @@ import type { ApiSupermarket } from '../utils/catalogFormat';
 
 export function AllSupermarketsScreen() {
   const insets = useSafeAreaInsets();
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const [supermarkets, setSupermarkets] = useState<ApiSupermarket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,53 +39,36 @@ export function AllSupermarketsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
-  if (supermarkets.length === 0) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.emptyText}>No supermarkets available.</Text>
-      </View>
+      <FlatList
+        data={[0, 1, 2]}
+        keyExtractor={(i) => String(i)}
+        renderItem={({ item }) => <StoreCardSkeleton index={item} />}
+        contentContainerStyle={styles.list}
+        style={styles.screen}
+      />
     );
   }
 
   return (
     <FlatList
+      style={styles.screen}
       data={supermarkets}
       keyExtractor={(item) => item.id}
-      renderItem={({ item }) => (
-        <SupermarketListCard
-          store={item}
-          onPress={() => navigation.navigate('Store', { storeId: item.id })}
-        />
+      renderItem={({ item, index }) => (
+        <FadeInUp index={index}>
+          <SupermarketListCard store={item} onPress={() => navigation.navigate('Store', { storeId: item.id })} />
+        </FadeInUp>
       )}
-      contentContainerStyle={[
-        styles.list,
-        { paddingBottom: insets.bottom + spacing.xl },
-      ]}
+      ListEmptyComponent={
+        <EmptyState art="mark" title="No supermarkets yet" body="Stores near you will show up here." />
+      }
+      contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + spacing.xl }]}
       showsVerticalScrollIndicator={false}
     />
   );
 }
 
 const styles = StyleSheet.create({
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-  },
-  emptyText: {
-    color: colors.textSecondary,
-    fontSize: 16,
-  },
-  list: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-    backgroundColor: colors.background,
-  },
+  screen: { flex: 1, backgroundColor: colors.background },
+  list: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm },
 });

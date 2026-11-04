@@ -50,36 +50,36 @@ export type ApiCartItem = {
 };
 
 const CATEGORY_ICON_BY_SLUG: Record<string, keyof typeof Ionicons.glyphMap> = {
-  groceries: 'basket',
-  drinks: 'wine',
-  snacks: 'fast-food',
+  groceries: 'nutrition',
+  drinks: 'beer',
+  snacks: 'ice-cream',
   toiletries: 'water',
   household: 'home',
   'frozen-foods': 'snow',
   frozen: 'snow',
-  'baby-products': 'balloon',
-  baby: 'balloon',
-  'cleaning-items': 'brush',
-  cleaning: 'brush',
-  'personal-care': 'sparkles',
+  'baby-products': 'happy',
+  baby: 'happy',
+  'cleaning-items': 'sparkles',
+  cleaning: 'sparkles',
+  'personal-care': 'flower',
 };
 
 // Inlined here (same values as theme/categoryColors) to avoid a circular import
 // between theme/index.ts and this utility file.
 const CATEGORY_COLOR_BY_SLUG: Record<string, { bg: string; icon: string }> = {
-  groceries:        { bg: '#E3F2E1', icon: '#2F6B3A' },
-  drinks:           { bg: '#FDECD8', icon: '#C6742B' },
-  snacks:           { bg: '#FDEBD3', icon: '#C77A1E' },
-  toiletries:       { bg: '#FBE7EC', icon: '#B4436C' },
-  household:        { bg: '#E3EEF7', icon: '#2C6E9E' },
-  frozen:           { bg: '#E5F3F7', icon: '#2A7C93' },
-  'frozen-foods':   { bg: '#E5F3F7', icon: '#2A7C93' },
-  baby:             { bg: '#EFE7F7', icon: '#6A4A96' },
-  'baby-products':  { bg: '#EFE7F7', icon: '#6A4A96' },
-  cleaning:         { bg: '#F5E1DA', icon: '#B4552D' },
-  'cleaning-items': { bg: '#F5E1DA', icon: '#B4552D' },
-  'personal-care':  { bg: '#FBE7EC', icon: '#B4436C' },
-  default:          { bg: '#EFEFEF', icon: '#666666' },
+  groceries:        { bg: '#E3F2E1', icon: '#1F6B3A' },
+  drinks:           { bg: '#FDECD8', icon: '#A85A16' },
+  snacks:           { bg: '#FFF1CC', icon: '#946200' },
+  toiletries:       { bg: '#FBE7EC', icon: '#A33A62' },
+  household:        { bg: '#E3EEF7', icon: '#245E88' },
+  frozen:           { bg: '#E2F2F6', icon: '#1F6C80' },
+  'frozen-foods':   { bg: '#E2F2F6', icon: '#1F6C80' },
+  baby:             { bg: '#EFE7F7', icon: '#5E3F8A' },
+  'baby-products':  { bg: '#EFE7F7', icon: '#5E3F8A' },
+  cleaning:         { bg: '#FFE8E1', icon: '#B23E1E' },
+  'cleaning-items': { bg: '#FFE8E1', icon: '#B23E1E' },
+  'personal-care':  { bg: '#FBE7EC', icon: '#A33A62' },
+  default:          { bg: '#F3EBDD', icon: '#4A6357' },
 };
 
 const PAYMENT_METHOD_MAP: Record<string, BackendPaymentMethod> = {

@@ -1,4 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { LoaderView } from '../components/brand/GrabitLoader';
+import { GrabitMark } from '../components/brand/GrabitMark';
 import { useAuth } from '../context/AuthContext';
 import { useOnboardingGate } from '../context/OnboardingGateContext';
 import { CheckoutScreen } from '../screens/CheckoutScreen';
@@ -15,24 +17,21 @@ import { PaymentMethodsScreen } from '../screens/profile/PaymentMethodsScreen';
 import { SavedAddressesScreen } from '../screens/profile/SavedAddressesScreen';
 import { SettingsScreen } from '../screens/profile/SettingsScreen';
 import { AllSupermarketsScreen } from '../screens/AllSupermarketsScreen';
-import { colors } from '../theme';
+import { colors, fonts } from '../theme';
 import { AuthNavigator } from './AuthNavigator';
 import { MainTabNavigator } from './MainTabNavigator';
 import type { RootStackParamList } from './navigationRef';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+const headerMark = () => <GrabitMark size={26} />;
 
 export function RootNavigator() {
   const { isSignedIn, isAuthReady } = useAuth();
   const { hasSeenOnboarding, isOnboardingGateReady } = useOnboardingGate();
 
   if (!isAuthReady || !isOnboardingGateReady) {
-    return (
-      <View style={styles.boot}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
+    return <LoaderView />;
   }
 
   if (!hasSeenOnboarding) {
@@ -48,89 +47,38 @@ export function RootNavigator() {
       initialRouteName="MainTabs"
       screenOptions={{
         headerTintColor: colors.text,
-        headerTitleStyle: { fontWeight: '700' },
+        headerStyle: { backgroundColor: colors.background },
+        headerShadowVisible: false,
+        headerTitleAlign: 'center',
+        headerTitleStyle: { fontFamily: fonts.display, fontSize: 19, color: colors.text },
+        headerBackButtonDisplayMode: 'minimal',
+        headerRight: headerMark,
         contentStyle: { backgroundColor: colors.background },
+        animation: 'slide_from_right',
       }}
     >
-      <Stack.Screen
-        name="MainTabs"
-        component={MainTabNavigator}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="Notifications"
-        component={NotificationsScreen}
-        options={{ title: 'Notifications' }}
-      />
-      <Stack.Screen
-        name="Store"
-        component={StoreScreen}
-        options={{ headerShown: false }}
-      />
+      <Stack.Screen name="MainTabs" component={MainTabNavigator} options={{ headerShown: false }} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />
+      <Stack.Screen name="Store" component={StoreScreen} options={{ headerShown: false }} />
       <Stack.Screen
         name="ProductDetail"
         component={ProductDetailScreen}
-        options={{ title: 'Product' }}
+        options={{ headerShown: false, animation: 'slide_from_bottom' }}
       />
-      <Stack.Screen
-        name="Checkout"
-        component={CheckoutScreen}
-        options={{ title: 'Checkout' }}
-      />
+      <Stack.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Checkout' }} />
       <Stack.Screen
         name="OrderSuccess"
         component={OrderSuccessScreen}
-        options={{ headerShown: false }}
+        options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
       />
-      <Stack.Screen
-        name="TrackOrder"
-        component={TrackOrderScreen}
-        options={{ title: 'Track order' }}
-      />
-      <Stack.Screen
-        name="SavedAddresses"
-        component={SavedAddressesScreen}
-        options={{ title: 'Saved addresses' }}
-      />
-      <Stack.Screen
-        name="Favorites"
-        component={FavoritesScreen}
-        options={{ title: 'My favorites' }}
-      />
-      <Stack.Screen
-        name="PaymentMethods"
-        component={PaymentMethodsScreen}
-        options={{ title: 'Payment methods' }}
-      />
-      <Stack.Screen
-        name="OrderHistory"
-        component={OrderHistoryScreen}
-        options={{ title: 'Order history' }}
-      />
-      <Stack.Screen
-        name="HelpSupport"
-        component={HelpSupportScreen}
-        options={{ title: 'Help & support' }}
-      />
-      <Stack.Screen
-        name="Settings"
-        component={SettingsScreen}
-        options={{ title: 'Settings' }}
-      />
-      <Stack.Screen
-        name="AllSupermarkets"
-        component={AllSupermarketsScreen}
-        options={{ title: 'All supermarkets' }}
-      />
+      <Stack.Screen name="TrackOrder" component={TrackOrderScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="SavedAddresses" component={SavedAddressesScreen} options={{ title: 'Saved addresses' }} />
+      <Stack.Screen name="Favorites" component={FavoritesScreen} options={{ title: 'My favorites' }} />
+      <Stack.Screen name="PaymentMethods" component={PaymentMethodsScreen} options={{ title: 'Payment methods' }} />
+      <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} options={{ title: 'Order history' }} />
+      <Stack.Screen name="HelpSupport" component={HelpSupportScreen} options={{ title: 'Help & support' }} />
+      <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
+      <Stack.Screen name="AllSupermarkets" component={AllSupermarketsScreen} options={{ title: 'All supermarkets' }} />
     </Stack.Navigator>
   );
 }
-
-const styles = StyleSheet.create({
-  boot: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-  },
-});

@@ -1,12 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useEffect, useMemo, useState } from 'react';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
-  Image,
-  ImageBackground,
+  Animated,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,13 +14,21 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GrabitLoader, LoaderView } from '../components/brand/GrabitLoader';
+import { CartBubble } from '../components/common/CartBubble';
+import { EmptyState } from '../components/common/EmptyState';
+import { FadeInUp } from '../components/motion/FadeInUp';
+import { PressableScale } from '../components/motion/PressableScale';
+import { ProductCardSkeleton } from '../components/motion/Skeleton';
 import { ProductImage } from '../components/ProductImage';
+import { measureView, useCartFly } from '../context/CartFlyContext';
+import { showToast } from '../context/ToastContext';
 import type { RootStackParamList } from '../navigation/navigationRef';
 import { categoryService } from '../services/categoryService';
 import { supermarketService } from '../services/supermarketService';
 import { productService } from '../services/productService';
 import { cartService } from '../services/cartService';
-import { colors, radii, shadows, spacing } from '../theme';
+import { brand, colors, fonts, radii, shadows, spacing } from '../theme';
 import {
   getProductCategoryName,
   getProductImageUrl,
@@ -31,17 +38,24 @@ import {
   type ApiCategory,
   type ApiProduct,
 } from '../utils/catalogFormat';
+import { haptic } from '../utils/haptics';
 import { parseApiError } from '../utils/parseApiError';
 
 type R = RouteProp<RootStackParamList, 'Store'>;
 type Nav = NativeStackNavigationProp<RootStackParamList>;
+
+const HERO_H = 270;
 
 export function StoreScreen() {
   const insets = useSafeAreaInsets();
   const route = useRoute<R>();
   const navigation = useNavigation<Nav>();
   const { storeId, categoryId: routeCategory } = route.params;
-  
+  const { fly } = useCartFly();
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const cartRef = useRef<View>(null);
+  const [landSignal, setLandSignal] = useState(0);
+
   const [store, setStore] = useState<any>(null);
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [allProducts, setAllProducts] = useState<ApiProduct[]>([]);
@@ -49,7 +63,6 @@ export function StoreScreen() {
   const [productsLoading, setProductsLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [categoryId, setCategoryId] = useState<string | null>(routeCategory ?? null);
-  const [heroErr, setHeroErr] = useState(false);
   const [addingId, setAddingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -107,24 +120,28 @@ export function StoreScreen() {
     if (!search.trim()) return allProducts;
     const q = search.trim().toLowerCase();
     return allProducts.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        getProductCategoryName(p).toLowerCase().includes(q),
+      (p) => p.name.toLowerCase().includes(q) || getProductCategoryName(p).toLowerCase().includes(q),
     );
   }, [allProducts, search]);
 
-  const handleAddToCart = async (productId: string) => {
+  const handleAddToCart = async (product: ApiProduct, imageRef: { current: View | null }) => {
     if (addingId) return;
-    setAddingId(productId);
+    setAddingId(product.id);
     try {
-      await cartService.addItem(productId, 1);
-      Alert.alert('Success', 'Item added to cart.');
+      await cartService.addItem(product.id, 1);
+      fly(await measureView(imageRef), getProductImageUrl(product), {
+        to: await measureView(cartRef),
+        onLand: () => setLandSignal((n) => n + 1),
+      });
+      showToast(`${product.name} added`, {
+        action: { label: 'View cart', onPress: () => navigation.navigate('MainTabs', { screen: 'Cart' }) },
+      });
     } catch (error: unknown) {
+      haptic.error();
       Alert.alert(
         'Cart Error',
         parseApiError(error, {
-          fallback:
-            'Failed to add item to cart. Make sure you only add items from one supermarket.',
+          fallback: 'Failed to add item to cart. Make sure you only add items from one supermarket.',
         }),
       );
     } finally {
@@ -133,317 +150,328 @@ export function StoreScreen() {
   };
 
   if (loading) {
-    return (
-      <View style={styles.miss}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={{ marginTop: spacing.md }}>Loading store...</Text>
-      </View>
-    );
+    return <LoaderView label="Opening store…" />;
   }
 
   if (!store) {
     return (
-      <View style={styles.miss}>
-        <Text>Store not found.</Text>
-        <Pressable onPress={() => navigation.goBack()}>
-          <Text style={{ color: colors.primary, marginTop: spacing.md, fontWeight: '700' }}>Go back</Text>
-        </Pressable>
+      <View style={[styles.screen, { paddingTop: insets.top + spacing.xxl }]}>
+        <EmptyState
+          art="mark"
+          title="Store not found"
+          body="This store may be closed or no longer on Grabit."
+          actionLabel="Go back"
+          onAction={() => navigation.goBack()}
+        />
       </View>
     );
   }
 
   const { min, max } = getSupermarketEta(store);
-  const eta = `${min}–${max} mins`;
   const deliveryFee = store.deliveryFee !== undefined ? store.deliveryFee : 500;
-  const heroImage = getSupermarketImageUrl(store);
   const categoryChips = toCategoryGridItems(categories);
+
+  const heroScale = scrollY.interpolate({ inputRange: [-200, 0], outputRange: [1.6, 1], extrapolateRight: 'clamp' });
+  const heroShift = scrollY.interpolate({ inputRange: [0, HERO_H], outputRange: [0, HERO_H * 0.4], extrapolateLeft: 'clamp' });
+  const barBg = scrollY.interpolate({ inputRange: [HERO_H - 140, HERO_H - 80], outputRange: [0, 1], extrapolate: 'clamp' });
 
   return (
     <View style={styles.screen}>
-      <View style={[styles.head, { paddingTop: insets.top + spacing.sm }]}>
-        <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </Pressable>
-        <Text style={styles.brand}>Goshop</Text>
-        <Image
-          source={{ uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80' }}
-          style={styles.avatar}
-        />
-      </View>
-      <ScrollView
+      <StatusBar style="light" />
+      <Animated.ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
+        scrollEventThrottle={16}
+        keyboardShouldPersistTaps="handled"
       >
-        <ImageBackground
-          source={{ uri: heroErr || !heroImage ? 'https://placehold.co/400x200/png?text=No+Image' : heroImage }}
-          style={styles.hero}
-          imageStyle={styles.heroImg}
-          onError={() => setHeroErr(true)}
-        >
-          <View style={styles.heroGrad} />
-          <View style={styles.heroText}>
-            <Text style={styles.heroTitle}>{store.name}</Text>
-            <Text style={styles.heroMeta}>
-              ★ {store.rating || '4.5'} · {eta} · ₦{deliveryFee} delivery
+        <Animated.View style={[styles.hero, { transform: [{ translateY: heroShift }, { scale: heroScale }] }]}>
+          <ProductImage uri={getSupermarketImageUrl(store)} style={StyleSheet.absoluteFillObject} label={store.name} />
+          <View style={styles.heroScrim} />
+          <View style={[styles.heroText, { paddingBottom: spacing.xxl + spacing.xl }]}>
+            <Text style={styles.heroTitle} numberOfLines={2}>
+              {store.name}
             </Text>
+            <View style={styles.heroChips}>
+              <View style={styles.heroChip}>
+                <Ionicons name="star" size={13} color={colors.star} />
+                <Text style={styles.heroChipTxt}>{store.rating || '4.5'}</Text>
+              </View>
+              <View style={styles.heroChip}>
+                <Ionicons name="time-outline" size={13} color={brand.oat} />
+                <Text style={styles.heroChipTxt}>
+                  {min}–{max} min
+                </Text>
+              </View>
+              <View style={[styles.heroChip, Number(deliveryFee) === 0 && { backgroundColor: brand.lime }]}>
+                <Ionicons name="bicycle" size={13} color={Number(deliveryFee) === 0 ? brand.forest : brand.oat} />
+                <Text style={[styles.heroChipTxt, Number(deliveryFee) === 0 && { color: brand.forest }]}>
+                  {Number(deliveryFee) === 0 ? 'Free delivery' : `₦${Number(deliveryFee).toLocaleString()} delivery`}
+                </Text>
+              </View>
+            </View>
           </View>
-        </ImageBackground>
+        </Animated.View>
+
         <View style={styles.body}>
           <View style={styles.searchWrap}>
-            <Ionicons name="search-outline" size={20} color={colors.textMuted} />
+            <Ionicons name="search" size={20} color={colors.textMuted} />
             <TextInput
               value={search}
               onChangeText={setSearch}
-              placeholder="Search in store"
+              placeholder={`Search ${store.name}`}
               placeholderTextColor={colors.textMuted}
               style={styles.searchIn}
+              accessibilityLabel="Search in store"
             />
+            {search ? (
+              <Pressable onPress={() => setSearch('')} hitSlop={10} accessibilityLabel="Clear search">
+                <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+              </Pressable>
+            ) : null}
           </View>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.chips}
+            style={styles.chipsScroll}
           >
-            <Pressable
-              style={[styles.chip, !categoryId && styles.chipOn]}
-              onPress={() => setCategoryId(null)}
-            >
-              <Text style={[styles.chipTxt, !categoryId && styles.chipTxtOn]}>All</Text>
-            </Pressable>
-            {categoryChips.map((c) => (
-              <Pressable
-                key={c.id}
-                style={[styles.chip, categoryId === c.id && styles.chipOn]}
-                onPress={() => setCategoryId(categoryId === c.id ? null : c.id)}
-              >
-                <Text style={[styles.chipTxt, categoryId === c.id && styles.chipTxtOn]}>
-                  {c.name}
-                </Text>
-              </Pressable>
-            ))}
+            {[{ id: null as string | null, name: 'All' }, ...categoryChips].map((c) => {
+              const on = c.id === null ? !categoryId : categoryId === c.id;
+              return (
+                <Pressable
+                  key={c.id ?? '__all'}
+                  style={[styles.chip, on && styles.chipOn]}
+                  onPress={() => {
+                    haptic.select();
+                    setCategoryId(c.id === null ? null : categoryId === c.id ? null : c.id);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: on }}
+                >
+                  <Text style={[styles.chipTxt, on && styles.chipTxtOn]}>{c.name}</Text>
+                </Pressable>
+              );
+            })}
           </ScrollView>
           <View style={styles.secHead}>
             <Text style={styles.secTitle}>Products</Text>
-            <Text style={styles.secSub}>
-              {productsLoading ? 'Loading…' : `${filtered.length} items`}
-            </Text>
+            {productsLoading ? (
+              <GrabitLoader size={20} />
+            ) : (
+              <Text style={styles.secSub}>{filtered.length} items</Text>
+            )}
           </View>
-          <View style={styles.grid}>
-            {filtered.map((p) => (
-              <ProductCard
-                key={p.id}
-                product={p}
-                isAdding={addingId === p.id}
-                onOpen={() => navigation.navigate('ProductDetail', { storeId, productId: p.id })}
-                onAdd={() => handleAddToCart(p.id)}
-              />
-            ))}
-          </View>
+
+          {productsLoading && allProducts.length === 0 ? (
+            <View style={styles.grid}>
+              {[0, 1, 2, 3].map((i) => (
+                <ProductCardSkeleton key={i} index={i} />
+              ))}
+            </View>
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              art="search"
+              title={search ? 'Nothing matches that' : 'No products here yet'}
+              body={search ? `We couldn't find "${search}" in this store.` : 'Try another category.'}
+            />
+          ) : (
+            <View style={styles.grid}>
+              {filtered.map((p, i) => (
+                <ProductCard
+                  key={p.id}
+                  index={i}
+                  product={p}
+                  isAdding={addingId === p.id}
+                  onOpen={() => navigation.navigate('ProductDetail', { storeId, productId: p.id })}
+                  onAdd={(ref) => handleAddToCart(p, ref)}
+                />
+              ))}
+            </View>
+          )}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
+
+      <Animated.View pointerEvents="none" style={[styles.topBar, { height: insets.top + 60, opacity: barBg }]}>
+        <Text style={[styles.topBarTitle, { marginTop: insets.top }]} numberOfLines={1}>
+          {store.name}
+        </Text>
+      </Animated.View>
+      <View style={[styles.topButtons, { top: insets.top + spacing.sm }]}>
+        <PressableScale
+          onPress={() => navigation.goBack()}
+          style={styles.roundBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+        >
+          <Ionicons name="arrow-back" size={22} color={colors.text} />
+        </PressableScale>
+        <CartBubble
+          ref={cartRef}
+          landSignal={landSignal}
+          onPress={() => navigation.navigate('MainTabs', { screen: 'Cart' })}
+        />
+      </View>
     </View>
   );
 }
 
 function ProductCard({
   product,
+  index,
   isAdding,
   onOpen,
   onAdd,
 }: {
   product: ApiProduct;
+  index: number;
   isAdding?: boolean;
   onOpen: () => void;
-  onAdd: () => void;
+  onAdd: (imageRef: { current: View | null }) => void;
 }) {
+  const imageRef = useRef<View>(null);
   return (
-    <View style={styles.card}>
-      <View style={styles.cardImgWrap}>
-        <Pressable onPress={onOpen}>
-          <ProductImage
-            uri={getProductImageUrl(product)}
-            style={styles.cardImg}
-            label={product.name}
-          />
-        </Pressable>
-        <Pressable style={styles.addBtn} onPress={onAdd} disabled={isAdding}>
-          {isAdding ? (
-            <ActivityIndicator size="small" color={colors.surface} />
-          ) : (
-            <Ionicons name="add" size={22} color={colors.surface} />
-          )}
-        </Pressable>
-      </View>
-      <Pressable onPress={onOpen}>
+    <FadeInUp index={index} style={styles.cardCell}>
+      <PressableScale onPress={onOpen} scaleTo={0.97} style={styles.card} accessibilityRole="button" accessibilityLabel={product.name}>
+        <View ref={imageRef} collapsable={false} style={styles.cardImgWrap}>
+          <ProductImage uri={getProductImageUrl(product)} style={styles.cardImg} label={product.name} />
+        </View>
         <Text numberOfLines={2} style={styles.pName}>
           {product.name}
         </Text>
-        <Text style={styles.pCat}>{getProductCategoryName(product)}</Text>
-        <Text style={styles.pPrice}>₦{Number(product.price || 0).toLocaleString()}</Text>
-      </Pressable>
-    </View>
+        <Text style={styles.pCat} numberOfLines={1}>
+          {getProductCategoryName(product)}
+        </Text>
+        <View style={styles.priceRow}>
+          <Text style={styles.pPrice}>₦{Number(product.price || 0).toLocaleString()}</Text>
+          <PressableScale
+            scaleTo={0.82}
+            hapticFeedback
+            style={styles.addBtn}
+            onPress={() => onAdd(imageRef)}
+            disabled={isAdding}
+            accessibilityRole="button"
+            accessibilityLabel={`Add ${product.name} to cart`}
+          >
+            {isAdding ? (
+              <GrabitLoader size={20} variant="reverse" />
+            ) : (
+              <Ionicons name="add" size={24} color={colors.surface} />
+            )}
+          </PressableScale>
+        </View>
+      </PressableScale>
+    </FadeInUp>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  miss: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  head: {
+  hero: { height: HERO_H, justifyContent: 'flex-end', backgroundColor: brand.forest, overflow: 'hidden' },
+  heroScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10,46,31,0.5)' },
+  heroText: { paddingHorizontal: spacing.xl },
+  heroTitle: {
+    fontFamily: fonts.display,
+    fontSize: 30,
+    lineHeight: 33,
+    letterSpacing: -0.8,
+    color: brand.oat,
+    marginBottom: spacing.md,
+  },
+  heroChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  heroChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.md,
-    backgroundColor: colors.surface,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    gap: 5,
+    backgroundColor: 'rgba(255,246,230,0.18)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radii.pill,
   },
-  brand: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: colors.primary,
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.border,
-  },
-  hero: {
-    height: 200,
-    justifyContent: 'flex-end',
-  },
-  heroImg: {
-    borderBottomLeftRadius: radii.lg,
-    borderBottomRightRadius: radii.lg,
-  },
-  heroGrad: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    borderBottomLeftRadius: radii.lg,
-    borderBottomRightRadius: radii.lg,
-  },
-  heroText: {
-    padding: spacing.xl,
-  },
-  heroTitle: {
-    color: colors.surface,
-    fontSize: 22,
-    fontWeight: '800',
-    marginBottom: spacing.xs,
-  },
-  heroMeta: {
-    color: 'rgba(255,255,255,0.95)',
-    fontSize: 14,
-  },
+  heroChipTxt: { fontFamily: fonts.bold, fontSize: 13, color: brand.oat },
   body: {
+    marginTop: -spacing.xxl,
+    backgroundColor: colors.background,
+    borderTopLeftRadius: radii.xxl,
+    borderTopRightRadius: radii.xxl,
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.xl,
   },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.lg,
-  },
-  searchIn: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    marginLeft: spacing.sm,
-    color: colors.text,
-  },
-  chips: {
     gap: spacing.sm,
-    paddingBottom: spacing.lg,
-  },
-  chip: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.pill,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  chipOn: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipTxt: {
-    color: colors.text,
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  chipTxtOn: {
-    color: colors.surface,
-  },
-  secHead: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    marginBottom: spacing.md,
-  },
-  secTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  secSub: {
-    color: colors.textSecondary,
-    fontSize: 13,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  card: {
-    width: '47%',
     backgroundColor: colors.surface,
     borderRadius: radii.lg,
-    padding: spacing.md,
-    marginBottom: spacing.md,
+    paddingHorizontal: spacing.lg,
+    minHeight: 52,
     ...shadows.soft,
   },
-  cardImgWrap: {
-    marginBottom: spacing.sm,
-    position: 'relative',
+  searchIn: { flex: 1, paddingVertical: spacing.md, color: colors.text, fontFamily: fonts.regular, fontSize: 15 },
+  chipsScroll: { marginHorizontal: -spacing.xl, marginTop: spacing.lg },
+  chips: { gap: spacing.sm, paddingHorizontal: spacing.xl, paddingBottom: spacing.lg },
+  chip: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: radii.pill,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  cardImg: {
-    width: '100%',
-    height: 120,
-    borderRadius: radii.md,
+  chipOn: { backgroundColor: brand.forest, borderColor: brand.forest },
+  chipTxt: { fontFamily: fonts.semibold, fontSize: 14, color: colors.text },
+  chipTxtOn: { color: brand.oat },
+  secHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
+  secTitle: { fontFamily: fonts.display, fontSize: 20, letterSpacing: -0.4, color: colors.text },
+  secSub: { fontFamily: fonts.medium, fontSize: 13, color: colors.textSecondary },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  cardCell: { width: '48%', marginBottom: spacing.md },
+  card: { backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.sm, ...shadows.soft },
+  cardImgWrap: { borderRadius: radii.md, overflow: 'hidden', marginBottom: spacing.sm },
+  cardImg: { width: '100%', height: 124, borderRadius: radii.md },
+  pName: { fontFamily: fonts.bold, fontSize: 14, color: colors.text, minHeight: 38, paddingHorizontal: 4 },
+  pCat: { fontFamily: fonts.regular, fontSize: 12, color: colors.textSecondary, marginTop: 2, paddingHorizontal: 4 },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.sm,
+    paddingLeft: 4,
   },
+  pPrice: { fontFamily: fonts.display, fontSize: 17, letterSpacing: -0.2, color: colors.text },
   addBtn: {
-    position: 'absolute',
-    right: 6,
-    bottom: 6,
-    width: 36,
-    height: 36,
-    borderRadius: radii.sm,
-    backgroundColor: colors.bannerOrange,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pName: {
-    fontWeight: '600',
-    color: colors.text,
-    fontSize: 13,
-    minHeight: 36,
+  topBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    backgroundColor: brand.forest,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 72,
   },
-  pCat: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    marginTop: 2,
+  topBarTitle: { fontFamily: fonts.display, fontSize: 17, color: brand.oat },
+  topButtons: {
+    position: 'absolute',
+    left: spacing.lg,
+    right: spacing.lg,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
-  pPrice: {
-    marginTop: spacing.sm,
-    fontWeight: '800',
-    color: colors.primary,
-    fontSize: 15,
+  roundBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.soft,
   },
 });

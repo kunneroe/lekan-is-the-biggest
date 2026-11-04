@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
-import { colors, radii, shadows, spacing, typography } from '../../theme';
+import { brand, colors, fonts, radii, shadows, spacing } from '../../theme';
 
 type Props = {
   value?: string;
@@ -20,25 +20,28 @@ export function HomeSearchBar({
   filterActive = false,
 }: Props) {
   return (
-    <View style={styles.wrap}>
-      <Ionicons name="search-outline" size={20} color={colors.textMuted} style={styles.searchIcon} />
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={colors.textMuted}
-        style={[styles.input, typography.body]}
-        returnKeyType="search"
-        onSubmitEditing={onSubmit}
-      />
+    <View style={styles.row}>
+      <View style={styles.wrap}>
+        <Ionicons name="search" size={20} color={colors.textMuted} />
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={colors.textMuted}
+          style={styles.input}
+          returnKeyType="search"
+          onSubmitEditing={onSubmit}
+          accessibilityLabel="Search"
+        />
+      </View>
       <Pressable
         onPress={onPressFilter}
-        hitSlop={8}
-        style={styles.filterBtn}
+        hitSlop={6}
+        style={({ pressed }) => [styles.filterBtn, pressed && { transform: [{ scale: 0.94 }] }]}
         accessibilityRole="button"
-        accessibilityLabel="Filters"
+        accessibilityLabel={filterActive ? 'Filters, active' : 'Filters'}
       >
-        <Ionicons name="options-outline" size={22} color={filterActive ? colors.primary : colors.primary} />
+        <Ionicons name="options" size={22} color={brand.forest} />
         {filterActive && <View style={styles.activeDot} />}
       </Pressable>
     </View>
@@ -46,38 +49,36 @@ export function HomeSearchBar({
 }
 
 const styles = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   wrap: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.sm,
     backgroundColor: colors.surface,
     borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    minHeight: 52,
     ...shadows.soft,
   },
-  searchIcon: {
-    marginRight: spacing.sm,
-  },
-  input: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    color: colors.text,
-  },
+  input: { flex: 1, paddingVertical: spacing.md, color: colors.text, fontFamily: fonts.regular, fontSize: 15 },
   filterBtn: {
-    padding: spacing.xs,
+    width: 52,
+    height: 52,
+    borderRadius: radii.lg,
+    backgroundColor: brand.lime,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   activeDot: {
     position: 'absolute',
-    top: 2,
-    right: 2,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.primary,
-    borderWidth: 1.5,
-    borderColor: colors.surface,
+    top: 10,
+    right: 10,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: brand.tomato,
+    borderWidth: 2,
+    borderColor: brand.lime,
   },
 });
-

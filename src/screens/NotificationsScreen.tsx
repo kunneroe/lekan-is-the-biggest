@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing } from '../theme';
+import { colors, spacing, fonts } from '../theme';
 
 export function NotificationsScreen() {
   const insets = useSafeAreaInsets();
@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   emptyTitle: {
-    fontWeight: '700',
+    fontFamily: fonts.bold,
     fontSize: 18,
     color: colors.text,
     marginTop: spacing.lg,

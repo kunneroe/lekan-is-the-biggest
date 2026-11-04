@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import {
   getSupermarketEta,
   getSupermarketImageUrl,
   type ApiSupermarket,
 } from '../../utils/catalogFormat';
-import { colors, radii, shadows, spacing, typography } from '../../theme';
+import { brand, colors, fonts, radii, shadows, spacing, typography } from '../../theme';
+import { ProductImage } from '../ProductImage';
+import { PressableScale } from '../motion/PressableScale';
 
 type Props = {
   store: ApiSupermarket;
@@ -15,119 +16,111 @@ type Props = {
 
 export function SupermarketListCard({ store, onPress }: Props) {
   const { min, max } = getSupermarketEta(store);
-  const eta = `${min} - ${max} mins`;
-  const fee = `₦${Number(store.deliveryFee || 0).toLocaleString()} delivery`;
-  const imageUrl = getSupermarketImageUrl(store);
-  const [imgErr, setImgErr] = useState(false);
-  const fallback = 'https://placehold.co/150x150/png?text=No+Image';
+  const fee = Number(store.deliveryFee || 0);
+  const closed = store.status === 'INACTIVE' || store.status === 'CLOSED';
 
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [pressed && { opacity: 0.92 }]}>
-      <View style={styles.card}>
-        <View style={styles.imageWrap}>
-          <Image
-            source={{ uri: imgErr || !imageUrl ? fallback : imageUrl }}
-            style={styles.image}
-            onError={() => setImgErr(true)}
-          />
-          <View style={styles.ratingBadge}>
+    <PressableScale
+      onPress={onPress}
+      scaleTo={0.97}
+      accessibilityRole="button"
+      accessibilityLabel={`${store.name}, ${closed ? 'closed' : 'open'}`}
+      style={styles.card}
+    >
+      <View>
+        <ProductImage uri={getSupermarketImageUrl(store)} style={styles.image} label={store.name} />
+        <View style={styles.topRow}>
+          <View style={styles.rating}>
             <Ionicons name="star" size={12} color={colors.star} />
             <Text style={styles.ratingText}>{Number(store.rating || 0).toFixed(1)}</Text>
           </View>
-        </View>
-        <View style={styles.body}>
-          <View style={styles.rowTop}>
-            <Text style={[styles.name, typography.storeName]} numberOfLines={2}>
-              {store.name}
-            </Text>
-            <Text
-              style={[
-                styles.open,
-                (store.status === 'INACTIVE' || store.status === 'CLOSED') && styles.closed,
-              ]}
-            >
-              {store.status === 'INACTIVE' || store.status === 'CLOSED' ? 'CLOSED' : 'OPEN'}
-            </Text>
-          </View>
-          <Text style={[styles.meta, typography.meta]}>
-            {store.area || store.city || 'Nearby'} • {eta}
-          </Text>
-          <View style={styles.feeRow}>
-            <Ionicons name="bicycle" size={16} color={colors.primary} />
-            <Text style={[styles.fee, typography.deliveryFee]}>{fee}</Text>
+          <View style={[styles.status, closed ? styles.statusClosed : styles.statusOpen]}>
+            <View style={[styles.statusDot, { backgroundColor: closed ? colors.danger : brand.lime }]} />
+            <Text style={[styles.statusTxt, closed && { color: colors.danger }]}>{closed ? 'Closed' : 'Open'}</Text>
           </View>
         </View>
       </View>
-    </Pressable>
+      <View style={styles.body}>
+        <Text style={[styles.name, typography.storeName]} numberOfLines={1}>
+          {store.name}
+        </Text>
+        <View style={styles.metaRow}>
+          <View style={styles.meta}>
+            <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
+            <Text style={styles.metaTxt} numberOfLines={1}>
+              {store.area || store.city || 'Nearby'}
+            </Text>
+          </View>
+          <View style={styles.meta}>
+            <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+            <Text style={styles.metaTxt}>
+              {min}–{max} min
+            </Text>
+          </View>
+          <View style={[styles.fee, fee === 0 && styles.feeFree]}>
+            <Ionicons name="bicycle" size={14} color={colors.primaryDark} />
+            <Text style={styles.feeTxt}>{fee === 0 ? 'Free' : `₦${fee.toLocaleString()}`}</Text>
+          </View>
+        </View>
+      </View>
+    </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radii.lg,
+    borderRadius: radii.xl,
     marginBottom: spacing.lg,
     overflow: 'hidden',
     ...shadows.card,
   },
-  imageWrap: {
-    position: 'relative',
-  },
-  image: {
-    width: '100%',
-    height: 140,
-    backgroundColor: colors.border,
-  },
-  ratingBadge: {
+  image: { width: '100%', height: 150 },
+  topRow: {
     position: 'absolute',
     top: spacing.md,
+    left: spacing.md,
     right: spacing.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  rating: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     backgroundColor: colors.overlayWhite,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 5,
     borderRadius: radii.pill,
   },
-  ratingText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  body: {
-    padding: spacing.lg,
-  },
-  rowTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-    marginBottom: spacing.xs,
-  },
-  name: {
-    flex: 1,
-    color: colors.text,
-  },
-  open: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: colors.open,
-    letterSpacing: 0.5,
-  },
-  closed: {
-    color: colors.danger,
-  },
-  meta: {
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
-  },
-  feeRow: {
+  ratingText: { fontFamily: fonts.bold, fontSize: 12, color: colors.text },
+  status: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 5,
+    borderRadius: radii.pill,
   },
+  statusOpen: { backgroundColor: brand.forest },
+  statusClosed: { backgroundColor: colors.overlayWhite },
+  statusDot: { width: 7, height: 7, borderRadius: 4 },
+  statusTxt: { fontFamily: fonts.bold, fontSize: 12, color: brand.oat },
+  body: { padding: spacing.lg, gap: spacing.sm },
+  name: { color: colors.text },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexWrap: 'wrap' },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 },
+  metaTxt: { fontFamily: fonts.medium, fontSize: 13, color: colors.textSecondary },
   fee: {
-    color: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.mint,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radii.pill,
+    marginLeft: 'auto',
   },
+  feeFree: { backgroundColor: brand.lime },
+  feeTxt: { fontFamily: fonts.bold, fontSize: 12, color: colors.primaryDark },
 });

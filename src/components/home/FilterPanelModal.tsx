@@ -1,14 +1,9 @@
 import { useState } from 'react';
-import {
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  View,
-} from 'react-native';
-import { colors, radii, shadows, spacing } from '../../theme';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { brand, colors, fonts, radii, spacing } from '../../theme';
+import { haptic } from '../../utils/haptics';
+import { BottomSheet } from '../common/BottomSheet';
+import { PrimaryButton } from '../common/PrimaryButton';
 
 export type FilterState = {
   sortByRating: boolean;
@@ -32,11 +27,42 @@ type Props = {
   onApply: (filters: FilterState) => void;
 };
 
+function ToggleRow({
+  title,
+  sub,
+  value,
+  onChange,
+}: {
+  title: string;
+  sub: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <View style={styles.toggleRow}>
+      <View style={styles.toggleLabel}>
+        <Text style={styles.rowTitle}>{title}</Text>
+        <Text style={styles.rowSub}>{sub}</Text>
+      </View>
+      <Switch
+        value={value}
+        onValueChange={(v) => {
+          haptic.select();
+          onChange(v);
+        }}
+        trackColor={{ false: colors.border, true: colors.primary }}
+        thumbColor={colors.surface}
+        accessibilityLabel={title}
+      />
+    </View>
+  );
+}
+
 export function FilterPanelModal({ visible, onClose, areas, value, onApply }: Props) {
   // local draft — only committed on Apply
   const [draft, setDraft] = useState<FilterState>(value);
 
-  // Sync draft when the modal re-opens with a fresh value from the parent
+  // Sync draft when the sheet re-opens with a fresh value from the parent
   const handleShow = () => setDraft(value);
 
   const handleApply = () => {
@@ -47,228 +73,100 @@ export function FilterPanelModal({ visible, onClose, areas, value, onApply }: Pr
   const handleClear = () => setDraft(DEFAULT_FILTERS);
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onShow={handleShow}
-      onRequestClose={onClose}
-    >
-      <View style={styles.wrap}>
-        <Pressable style={styles.backdrop} onPress={onClose} />
+    <BottomSheet visible={visible} onClose={onClose} onShow={handleShow} title="Filters">
+      <ToggleRow
+        title="Sort by rating"
+        sub="Highest rated stores first"
+        value={draft.sortByRating}
+        onChange={(v) => setDraft((d) => ({ ...d, sortByRating: v }))}
+      />
+      <View style={styles.divider} />
+      <ToggleRow
+        title="Open now only"
+        sub="Hide closed & inactive stores"
+        value={draft.openNowOnly}
+        onChange={(v) => setDraft((d) => ({ ...d, openNowOnly: v }))}
+      />
+      <View style={styles.divider} />
+      <ToggleRow
+        title="Free delivery only"
+        sub="₦0 delivery fee stores only"
+        value={draft.freeDeliveryOnly}
+        onChange={(v) => setDraft((d) => ({ ...d, freeDeliveryOnly: v }))}
+      />
 
-        <View style={styles.card}>
-          {/* ── Header ───────────────────────────────────────── */}
-          <Text style={styles.title}>Filters</Text>
-
-          {/* ── Sort by rating ───────────────────────────────── */}
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleLabel}>
-              <Text style={styles.rowTitle}>Sort by rating</Text>
-              <Text style={styles.rowSub}>Highest rated stores first</Text>
-            </View>
-            <Switch
-              value={draft.sortByRating}
-              onValueChange={(v) => setDraft((d) => ({ ...d, sortByRating: v }))}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={colors.surface}
-            />
-          </View>
-
+      {areas.length > 0 && (
+        <>
           <View style={styles.divider} />
-
-          {/* ── Open now only ────────────────────────────────── */}
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleLabel}>
-              <Text style={styles.rowTitle}>Open now only</Text>
-              <Text style={styles.rowSub}>Hide closed & inactive stores</Text>
-            </View>
-            <Switch
-              value={draft.openNowOnly}
-              onValueChange={(v) => setDraft((d) => ({ ...d, openNowOnly: v }))}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={colors.surface}
-            />
-          </View>
-
-          <View style={styles.divider} />
-
-          {/* ── Free delivery only ───────────────────────────── */}
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleLabel}>
-              <Text style={styles.rowTitle}>Free delivery only</Text>
-              <Text style={styles.rowSub}>₦0 delivery fee stores only</Text>
-            </View>
-            <Switch
-              value={draft.freeDeliveryOnly}
-              onValueChange={(v) => setDraft((d) => ({ ...d, freeDeliveryOnly: v }))}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={colors.surface}
-            />
-          </View>
-
-          {/* ── Area chips ───────────────────────────────────── */}
-          {areas.length > 0 && (
-            <>
-              <View style={styles.divider} />
-              <Text style={styles.areaLabel}>Area</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.chipRow}
-              >
-                {/* "All areas" chip — clears selection */}
+          <Text style={styles.areaLabel}>Area</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+            {[null, ...areas].map((a) => {
+              const on = draft.area === a;
+              return (
                 <Pressable
-                  style={[styles.chip, draft.area === null && styles.chipActive]}
-                  onPress={() => setDraft((d) => ({ ...d, area: null }))}
+                  key={a ?? '__all'}
+                  style={[styles.chip, on && styles.chipActive]}
+                  onPress={() => {
+                    haptic.select();
+                    setDraft((d) => ({ ...d, area: a }));
+                  }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: on }}
                 >
-                  <Text style={[styles.chipTxt, draft.area === null && styles.chipTxtActive]}>
-                    All areas
-                  </Text>
+                  <Text style={[styles.chipTxt, on && styles.chipTxtActive]}>{a ?? 'All areas'}</Text>
                 </Pressable>
+              );
+            })}
+          </ScrollView>
+        </>
+      )}
 
-                {areas.map((a) => (
-                  <Pressable
-                    key={a}
-                    style={[styles.chip, draft.area === a && styles.chipActive]}
-                    onPress={() => setDraft((d) => ({ ...d, area: a }))}
-                  >
-                    <Text style={[styles.chipTxt, draft.area === a && styles.chipTxtActive]}>
-                      {a}
-                    </Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
-            </>
-          )}
-
-          {/* ── Footer ───────────────────────────────────────── */}
-          <View style={styles.footer}>
-            <Pressable onPress={handleClear} style={styles.clearBtn}>
-              <Text style={styles.clearTxt}>Clear all</Text>
-            </Pressable>
-            <Pressable onPress={handleApply} style={styles.applyBtn}>
-              <Text style={styles.applyTxt}>Apply</Text>
-            </Pressable>
-          </View>
+      <View style={styles.footer}>
+        <Pressable onPress={handleClear} style={styles.clearBtn} accessibilityRole="button">
+          <Text style={styles.clearTxt}>Clear all</Text>
+        </Pressable>
+        <View style={{ flex: 1 }}>
+          <PrimaryButton label="Apply filters" onPress={handleApply} />
         </View>
       </View>
-    </Modal>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: spacing.xl,
-    paddingBottom: spacing.xxxl,
-    zIndex: 1,
-    ...shadows.card,
-  },
-  title: {
-    fontWeight: '800',
-    fontSize: 18,
-    marginBottom: spacing.lg,
-    color: colors.text,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border,
-    marginVertical: spacing.md,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.xs,
-  },
-  toggleLabel: {
-    flex: 1,
-    marginRight: spacing.md,
-  },
-  rowTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  rowSub: {
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginVertical: spacing.md },
+  toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.xs },
+  toggleLabel: { flex: 1, marginRight: spacing.md },
+  rowTitle: { fontFamily: fonts.bold, fontSize: 16, color: colors.text },
+  rowSub: { fontFamily: fonts.regular, fontSize: 13, color: colors.textSecondary, marginTop: 2 },
+  areaLabel: {
+    fontFamily: fonts.bold,
     fontSize: 12,
     color: colors.textSecondary,
-    marginTop: 2,
-  },
-  areaLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textSecondary,
     textTransform: 'uppercase',
-    letterSpacing: 0.6,
+    letterSpacing: 0.8,
     marginBottom: spacing.sm,
     marginTop: spacing.xs,
   },
-  chipRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    paddingBottom: spacing.xs,
-  },
+  chipRow: { flexDirection: 'row', gap: spacing.sm, paddingBottom: spacing.xs },
   chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + 2,
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
-  chipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipTxt: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  chipTxtActive: {
-    color: colors.surface,
-  },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: spacing.xl,
-    gap: spacing.md,
-  },
+  chipActive: { backgroundColor: brand.forest, borderColor: brand.forest },
+  chipTxt: { fontFamily: fonts.semibold, fontSize: 14, color: colors.text },
+  chipTxtActive: { color: brand.oat },
+  footer: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.xl, gap: spacing.md },
   clearBtn: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-    borderRadius: radii.md,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  clearTxt: {
-    color: colors.text,
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  applyBtn: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    borderRadius: radii.md,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-  },
-  applyTxt: {
-    color: colors.surface,
-    fontWeight: '700',
-    fontSize: 15,
-  },
+  clearTxt: { fontFamily: fonts.bold, fontSize: 15, color: colors.text },
 });

@@ -9,7 +9,6 @@ import {
   View,
   Modal,
   TextInput,
-  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState } from 'react';
@@ -18,7 +17,8 @@ import { useCallback } from 'react';
 import { useAddresses } from '../../context/AddressContext';
 import { addressService } from '../../services/addressService';
 import type { AddressLabel } from '../../types/address';
-import { colors, radii, shadows, spacing } from '../../theme';
+import { GrabitLoader } from '../../components/brand/GrabitLoader';
+import { colors, radii, shadows, spacing, fonts } from '../../theme';
 import {
   buildCreateAddressPayload,
   formatAddressLabel,
@@ -135,7 +135,7 @@ export function SavedAddressesScreen() {
       }}
     >
       {loading ? (
-        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: spacing.xl }} />
+        <GrabitLoader size={44} style={{ marginTop: spacing.xl }} />
       ) : addresses.length === 0 ? (
         <View style={styles.emptyWrap}>
           <Ionicons name="location-outline" size={48} color={colors.textMuted} />
@@ -243,7 +243,7 @@ export function SavedAddressesScreen() {
               </Pressable>
               <Pressable style={styles.saveBtn} onPress={() => void handleSave()} disabled={saving}>
                 {saving ? (
-                  <ActivityIndicator color={colors.surface} />
+                  <GrabitLoader size={20} variant="reverse" />
                 ) : (
                   <Text style={styles.saveTxt}>Save Address</Text>
                 )}
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   cardOn: { borderColor: colors.primary, borderWidth: 2 },
-  label: { fontWeight: '800', color: colors.text },
+  label: { fontFamily: fonts.black, color: colors.text },
   line: { color: colors.textSecondary, marginTop: 4, lineHeight: 20 },
   add: {
     flexDirection: 'row',
@@ -281,14 +281,14 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     borderRadius: radii.lg,
   },
-  addTxt: { color: colors.primary, fontWeight: '700' },
+  addTxt: { color: colors.primary, fontFamily: fonts.bold },
   emptyWrap: {
     alignItems: 'center',
     paddingVertical: spacing.xxxl,
     gap: spacing.sm,
   },
   emptyTitle: {
-    fontWeight: '800',
+    fontFamily: fonts.black,
     fontSize: 18,
     color: colors.text,
     marginTop: spacing.md,
@@ -312,8 +312,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
     ...shadows.card,
   },
-  modalTitle: { fontSize: 20, fontWeight: '800', marginBottom: spacing.lg, color: colors.text },
-  inputLab: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 4 },
+  modalTitle: { fontSize: 20, fontFamily: fonts.black, marginBottom: spacing.lg, color: colors.text },
+  inputLab: { fontSize: 13, fontFamily: fonts.semibold, color: colors.textSecondary, marginBottom: 4 },
   presetRow: {
     flexDirection: 'row',
     gap: spacing.sm,
@@ -332,8 +332,8 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     backgroundColor: colors.mint,
   },
-  presetTxt: { fontWeight: '600', color: colors.textSecondary, fontSize: 13 },
-  presetTxtOn: { color: colors.primary, fontWeight: '800' },
+  presetTxt: { fontFamily: fonts.semibold, color: colors.textSecondary, fontSize: 13 },
+  presetTxtOn: { color: colors.primary, fontFamily: fonts.black },
   input: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  cancelTxt: { fontWeight: '700', color: colors.textSecondary },
+  cancelTxt: { fontFamily: fonts.bold, color: colors.textSecondary },
   saveBtn: {
     flex: 1,
     padding: spacing.md,
@@ -360,5 +360,5 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     backgroundColor: colors.primary,
   },
-  saveTxt: { fontWeight: '700', color: colors.surface },
+  saveTxt: { fontFamily: fonts.bold, color: colors.surface },
 });
