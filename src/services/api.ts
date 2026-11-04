@@ -9,6 +9,9 @@ import { parseApiError } from '../utils/parseApiError';
 // Example: EXPO_PUBLIC_API_URL=http://192.168.1.100:4000/api/v1 npx expo start
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
 
+// TEMP (debugging "Network Error" on device): remove once the base URL is confirmed.
+console.log(`[api] base URL: "${API_BASE_URL}" (EXPO_PUBLIC_API_URL ${process.env.EXPO_PUBLIC_API_URL ? 'set' : 'NOT set, using default'})`);
+
 export const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000,
@@ -99,6 +102,9 @@ api.interceptors.response.use(
 
           const newAccessToken: string = refreshData.accessToken;
           await AsyncStorage.setItem('userToken', newAccessToken);
+          if (refreshData.refreshToken) {
+            await AsyncStorage.setItem('refreshToken', refreshData.refreshToken);
+          }
 
           onRefreshed(newAccessToken);
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;

@@ -18,6 +18,8 @@ type Props = {
   secureVisible?: boolean;
   /** Kept for compatibility — every variant now uses the Grabit field style. */
   variant?: AuthFieldVariant;
+  /** outline the field in red (e.g. after a wrong password) */
+  error?: boolean;
 };
 
 /** Labelled field; the border glows Basil and the icon turns green while focused. */
@@ -32,6 +34,7 @@ export function AuthTextField({
   autoCapitalize,
   onToggleSecure,
   secureVisible,
+  error = false,
 }: Props) {
   const [focused, setFocused] = useState(false);
   const focus = useRef(new Animated.Value(0)).current;
@@ -46,12 +49,14 @@ export function AuthTextField({
         style={[
           styles.row,
           {
-            borderColor: focus.interpolate({ inputRange: [0, 1], outputRange: [colors.border, brand.green] }),
+            borderColor: error
+              ? colors.danger
+              : focus.interpolate({ inputRange: [0, 1], outputRange: [colors.border, brand.green] }),
             backgroundColor: focus.interpolate({ inputRange: [0, 1], outputRange: [colors.surfaceAlt, colors.surface] }),
           },
         ]}
       >
-        <Ionicons name={icon} size={20} color={focused ? brand.green : colors.textMuted} />
+        <Ionicons name={icon} size={20} color={error ? colors.danger : focused ? brand.green : colors.textMuted} />
         <TextInput
           style={styles.input}
           placeholder={placeholder}

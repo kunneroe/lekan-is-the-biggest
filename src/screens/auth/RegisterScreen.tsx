@@ -10,7 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import type { AuthStackParamList } from '../../navigation/AuthNavigator';
 import { colors, fonts, radii, spacing } from '../../theme';
 import { haptic } from '../../utils/haptics';
-import { parseApiError } from '../../utils/parseApiError';
+import { describeAuthError } from '../../utils/authErrors';
 
 import { appAlert } from '../../context/DialogContext';
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
@@ -44,10 +44,15 @@ export function RegisterScreen({ navigation }: Props) {
       haptic.success();
     } catch (error: unknown) {
       haptic.error();
-      const msg = parseApiError(error, {
-        fallback: 'Registration failed. Please try again.',
-      });
-      appAlert('Registration Error', msg);
+      const info = describeAuthError(error, 'register');
+      if (info.kind === 'exists') {
+        appAlert(info.title, info.message, [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Log in', onPress: () => navigation.navigate('Login') },
+        ]);
+      } else {
+        appAlert(info.title, info.message);
+      }
     } finally {
       setBusy(false);
     }

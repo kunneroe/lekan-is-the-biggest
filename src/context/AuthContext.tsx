@@ -5,6 +5,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { authService } from '../services/authService';
@@ -29,14 +30,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [user, setUser] = useState<User | null>(null);
 
+  // Mirrors isSignedIn for callbacks that must not re-create on every change.
+  const signedInRef = useRef(false);
+  useEffect(() => {
+    signedInRef.current = isSignedIn;
+  }, [isSignedIn]);
+
   const signOut = useCallback(async (showAlert = false) => {
+    const wasSignedIn = signedInRef.current;
     await AsyncStorage.removeItem('userToken');
     await AsyncStorage.removeItem('refreshToken');
     await AsyncStorage.removeItem('userData');
     setIsSignedIn(false);
     setUser(null);
-    if (showAlert === true) {
-      appAlert('Session Expired', 'Please login again.');
+    // Only someone who was actually logged in can have a session expire. A wrong
+    // password on the login screen also lands here (via the request layer's 401
+    // handling) and must not show this.
+    if (showAlert === true && wasSignedIn) {
+      appAlert('Session expired', 'For your security, please log in again.');
     }
   }, []);
 

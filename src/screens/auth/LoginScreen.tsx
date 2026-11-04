@@ -1,16 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useState } from 'react';
-import { ImageBackground, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Animated, ImageBackground, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AuthSplitShell } from '../../components/auth/AuthSplitShell';
 import { AuthTextField } from '../../components/auth/AuthTextField';
+import { FormAlert } from '../../components/auth/FormAlert';
 import { PrimaryButton } from '../../components/common/PrimaryButton';
 import { PressableScale } from '../../components/motion/PressableScale';
 import { useAuth } from '../../context/AuthContext';
 import type { AuthStackParamList } from '../../navigation/AuthNavigator';
 import { brand, colors, fonts, radii, spacing } from '../../theme';
+import { describeAuthError, type AuthErrorInfo } from '../../utils/authErrors';
 import { haptic } from '../../utils/haptics';
-import { parseApiError } from '../../utils/parseApiError';
 
 import { appAlert } from '../../context/DialogContext';
 const PROMO_URI = 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=900&q=80';
@@ -23,28 +24,47 @@ export function LoginScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<(AuthErrorInfo & { fields: 'both' | 'email' | 'password' | 'none' }) | null>(null);
+  const shake = useRef(new Animated.Value(0)).current;
+
+  const nudge = () => {
+    haptic.error();
+    shake.setValue(0);
+    Animated.sequence(
+      [10, -9, 7, -5, 3, 0].map((x) => Animated.timing(shake, { toValue: x, duration: 55, useNativeDriver: true })),
+    ).start();
+  };
 
   const onLogin = async () => {
     if (busy) return;
-    if (!email || !password) {
-      haptic.error();
-      appAlert('Error', 'Please enter your email and password.');
+    if (!email.trim() || !password) {
+      setProblem({
+        kind: 'other',
+        title: 'Almost there',
+        message: !email.trim() && !password ? 'Enter your email or phone number and your password.' : !email.trim() ? 'Enter your email or phone number.' : 'Enter your password.',
+        fields: !email.trim() && !password ? 'both' : !email.trim() ? 'email' : 'password',
+      });
+      nudge();
       return;
     }
     setBusy(true);
+    setProblem(null);
     try {
-      await signIn(email, password);
+      await signIn(email.trim(), password);
       haptic.success();
     } catch (error: unknown) {
-      haptic.error();
-      const msg = parseApiError(error, {
-        fallback: 'Login failed. Please try again.',
-        unauthorizedFallback: 'Incorrect email/phone or password. Please try again.',
-      });
-      appAlert('Login Error', msg);
+      const info = describeAuthError(error, 'login');
+      setProblem({ ...info, fields: info.kind === 'credentials' ? 'both' : 'none' });
+      if (info.kind === 'credentials') setPassword('');
+      nudge();
     } finally {
       setBusy(false);
     }
+  };
+
+  const onEdit = (setter: (v: string) => void) => (v: string) => {
+    setter(v);
+    if (problem) setProblem(null);
   };
 
   return (
@@ -69,27 +89,42 @@ export function LoginScreen({ navigation }: Props) {
         </>
       }
     >
-      <AuthTextField
-        label="Email or phone number"
-        icon="at"
-        placeholder="e.g. name@domain.com"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-      />
-      <AuthTextField
-        label="Password"
-        icon="lock-closed"
-        placeholder="••••••••"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        onToggleSecure={() => setShowPass((v) => !v)}
-        secureVisible={showPass}
-      />
-      <Pressable style={styles.forgotWrap} onPress={() => navigation.navigate('ForgotPassword')} hitSlop={8}>
-        <Text style={styles.forgot}>Forgot password?</Text>
-      </Pressable>
+      <Animated.View style={{ transform: [{ translateX: shake }] }}>
+        <AuthTextField
+          label="Email or phone number"
+          icon="at"
+          placeholder="e.g. name@domain.com"
+          value={email}
+          onChangeText={onEdit(setEmail)}
+          keyboardType="email-address"
+          error={problem?.fields === 'both' || problem?.fields === 'email'}
+        />
+        <AuthTextField
+          label="Password"
+          icon="lock-closed"
+          placeholder="••••••••"
+          value={password}
+          onChangeText={onEdit(setPassword)}
+          secureTextEntry
+          onToggleSecure={() => setShowPass((v) => !v)}
+          secureVisible={showPass}
+          error={problem?.fields === 'both' || problem?.fields === 'password'}
+        />
+        {problem ? (
+          <FormAlert
+            kind={problem.kind}
+            title={problem.title}
+            message={problem.message}
+            actionLabel={problem.kind === 'credentials' ? 'Reset my password' : undefined}
+            onAction={problem.kind === 'credentials' ? () => navigation.navigate('ForgotPassword') : undefined}
+          />
+        ) : null}
+      </Animated.View>
+      {problem?.kind === 'credentials' ? null : (
+        <Pressable style={styles.forgotWrap} onPress={() => navigation.navigate('ForgotPassword')} hitSlop={8}>
+          <Text style={styles.forgot}>Forgot password?</Text>
+        </Pressable>
+      )}
       <PrimaryButton label={busy ? 'Logging in…' : 'Log in'} icon="arrow-forward" loading={busy} disabled={busy} onPress={onLogin} />
       <View style={styles.orRow}>
         <View style={styles.orLine} />
